@@ -15,15 +15,16 @@ class CustomDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
-    // isAdmin değişkeni ilerde menü gizlemek için kullanılabilir
-    final bool isAdmin = user?.roles?.contains('Admin') ?? false;
+
+    // 🔥 Rol kontrolü: Kullanıcı 'Viewer' rolüne sahip mi?
+    // Eğer role listesi null ise veya Viewer içermiyorsa false döner.
+    final bool isViewer = user?.roles?.contains('Viewer') ?? false;
 
     return Drawer(
-      // Drawer'ın genel arka planı
       backgroundColor: const Color(0xFF161A30),
       child: Column(
         children: [
-          // 1. HEADER (Sabit Alan)
+          // 1. HEADER (Herkes görebilir)
           UserAccountsDrawerHeader(
             margin: EdgeInsets.zero,
             accountName: Text(user?.fullName ?? "Kullanıcı"),
@@ -43,106 +44,113 @@ class CustomDrawer extends StatelessWidget {
                     )
                   : null,
             ),
-            decoration: const BoxDecoration(
-              color: Color(0xFF161A30), // Lacivert kurumsal renk
-            ),
+            decoration: const BoxDecoration(color: Color(0xFF161A30)),
           ),
 
           // 2. LİSTE ALANI
           Expanded(
             child: Container(
-              color: const Color(0xFFEEEEEE), // Menü arka planı
+              color: const Color(0xFFEEEEEE),
               child: Column(
                 children: [
                   // --- ORTAK MENÜLER ---
+
+                  // Gösterge Paneli (Herkes görebilir)
                   ListTile(
                     leading: const Icon(Icons.dashboard),
                     title: const Text('Gösterge Paneli'),
                     onTap: () {
-                      // 1. Drawer'ı kapat
                       Navigator.pop(context);
-
-                      // 2. 🔥 Stack'i temizle ve en alt sayfaya (Dashboard) in
                       Navigator.of(context).popUntil((route) => route.isFirst);
                     },
                   ),
 
-                  ListTile(
-                    leading: const Icon(Icons.person, color: Color(0xFF0D1B46)),
-                    title: const Text('Profilim'),
-                    onTap: () {
-                      Navigator.pop(context); // Drawer kapat
-
-                      // 🔥 Önce Dashboard'a in (temizlik)
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-
-                      // Sonra sayfayı aç
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ProfileScreen(),
-                        ),
-                      );
-                    },
-                  ),
+                  // 🔥 Profilim: Sadece Viewer DEĞİLSE göster
+                  if (!isViewer)
+                    ListTile(
+                      leading: const Icon(
+                        Icons.person,
+                        color: Color(0xFF0D1B46),
+                      ),
+                      title: const Text('Profilim'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileScreen(),
+                          ),
+                        );
+                      },
+                    ),
 
                   // --- YÖNETİM MENÜLERİ ---
-                  const Divider(),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "YÖNETİM",
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                  // 🔥 Bu bloğu sadece Viewer DEĞİLSE göster (Toplu gizleme)
+                  if (!isViewer) ...[
+                    const Divider(),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "YÖNETİM",
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  ListTile(
-                    leading: const Icon(Icons.tune, color: Color(0xFF161A30)),
-                    title: const Text(
-                      'Çarpan Ayarları',
-                      style: TextStyle(color: Color(0xFF161A30)),
+                    ListTile(
+                      leading: const Icon(Icons.tune, color: Color(0xFF161A30)),
+                      title: const Text(
+                        'Çarpan Ayarları',
+                        style: TextStyle(color: Color(0xFF161A30)),
+                      ),
+                      tileColor: Colors.blue.shade50,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const MultiplierSettingsScreen(),
+                          ),
+                        );
+                      },
                     ),
-                    tileColor: Colors.blue.shade50,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.of(
-                        context,
-                      ).popUntil((route) => route.isFirst); // 🔥 Temizlik
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const MultiplierSettingsScreen(),
-                        ),
-                      );
-                    },
-                  ),
 
-                  ListTile(
-                    leading: const Icon(Icons.people, color: Color(0xFF0D1B46)),
-                    title: const Text('Kullanıcılar'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.of(
-                        context,
-                      ).popUntil((route) => route.isFirst); // 🔥 Temizlik
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ViewerListScreen(),
-                        ),
-                      );
-                    },
-                  ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.people,
+                        color: Color(0xFF0D1B46),
+                      ),
+                      title: const Text('Kullanıcılar'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ViewerListScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                  // Yönetim menüsü bitişi
 
-                  // --- DİĞER ARAÇLAR ---
+                  // --- DİĞER ARAÇLAR (Herkes görebilir) ---
                   const Divider(),
                   const Padding(
                     padding: EdgeInsets.only(left: 16, top: 10, bottom: 5),
@@ -167,9 +175,7 @@ class CustomDrawer extends StatelessWidget {
                     title: const Text('Yardım Merkezi'),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.of(
-                        context,
-                      ).popUntil((route) => route.isFirst); // 🔥 Temizlik
+                      Navigator.of(context).popUntil((route) => route.isFirst);
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -187,9 +193,7 @@ class CustomDrawer extends StatelessWidget {
                     title: const Text('Sıkça Sorulan Sorular'),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.of(
-                        context,
-                      ).popUntil((route) => route.isFirst); // 🔥 Temizlik
+                      Navigator.of(context).popUntil((route) => route.isFirst);
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const FaqsScreen()),
@@ -200,7 +204,7 @@ class CustomDrawer extends StatelessWidget {
                   const Spacer(),
                   const Divider(),
 
-                  // --- ÇIKIŞ BUTONU ---
+                  // --- ÇIKIŞ BUTONU (Herkes görebilir) ---
                   ListTile(
                     leading: const Icon(Icons.exit_to_app, color: Colors.red),
                     title: const Text(
@@ -208,13 +212,8 @@ class CustomDrawer extends StatelessWidget {
                       style: TextStyle(color: Colors.red),
                     ),
                     onTap: () async {
-                      // Drawer'ı kapat
                       Navigator.pop(context);
-
-                      // API isteğini bekle
                       await authProvider.logout();
-
-                      // Tüm sayfaları sil ve Login ekranını aç
                       if (context.mounted) {
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(
