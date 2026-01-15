@@ -3,15 +3,11 @@ class Category {
   final String name;
   final int orderIndex;
 
-  Category({
-    required this.id,
-    required this.name,
-    required this.orderIndex,
-  });
+  Category({required this.id, required this.name, required this.orderIndex});
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      id: json['id'],
+      id: json['id']?.toString() ?? '',
       name: json['name'],
       orderIndex: json['orderIndex'] ?? 0,
     );
@@ -30,6 +26,10 @@ class TenantProduct {
   bool isActive;
   int orderIndex;
 
+  // 🔥 YENİ ALANLAR (Platform Görünürlüğü)
+  bool showOnWeb;
+  bool showOnMobile;
+
   TenantProduct({
     required this.id,
     required this.name,
@@ -41,11 +41,13 @@ class TenantProduct {
     this.addonAmount = 0.0,
     this.isActive = true,
     this.orderIndex = 0,
+    this.showOnWeb = true, // Varsayılan true
+    this.showOnMobile = true, // Varsayılan true
   });
 
   factory TenantProduct.fromJson(Map<String, dynamic> json) {
     return TenantProduct(
-      id: json['id'],
+      id: json['id']?.toString() ?? '',
       name: json['name'],
       categoryId: json['categoryId'] ?? '',
       categoryName: json['categoryName'] ?? 'DİĞER',
@@ -56,6 +58,9 @@ class TenantProduct {
       addonAmount: _toDouble(json['addonAmount']) ?? 0.0,
       isActive: json['isActive'] ?? true,
       orderIndex: json['orderIndex'] ?? 999,
+      // 🔥 JSON Parsing
+      showOnWeb: json['showOnWeb'] ?? true,
+      showOnMobile: json['showOnMobile'] ?? true,
     );
   }
 
@@ -70,6 +75,9 @@ class TenantProduct {
       'sellMultiplier': sellMultiplier,
       'addonAmount': addonAmount,
       'isActive': isActive,
+      // 🔥 Update Payload'una eklendi
+      'showOnWeb': showOnWeb,
+      'showOnMobile': showOnMobile,
     };
   }
 
@@ -93,6 +101,10 @@ class CreateProductDto {
   double addonAmount;
   int orderIndex;
 
+  // 🔥 YENİ ALANLAR
+  bool showOnWeb;
+  bool showOnMobile;
+
   CreateProductDto({
     required this.name,
     required this.categoryId,
@@ -101,6 +113,8 @@ class CreateProductDto {
     this.sellMultiplier = 1.0,
     this.addonAmount = 0.0,
     this.orderIndex = 99,
+    this.showOnWeb = true,
+    this.showOnMobile = true,
   });
 
   Map<String, dynamic> toJson() {
@@ -112,6 +126,23 @@ class CreateProductDto {
       'sellMultiplier': sellMultiplier,
       'addonAmount': addonAmount,
       'orderIndex': orderIndex,
+      // 🔥 Create Payload'una eklendi
+      'showOnWeb': showOnWeb,
+      'showOnMobile': showOnMobile,
     };
+  }
+}
+
+class SystemCatalogItem {
+  final String sourceKey;
+  final String name;
+
+  SystemCatalogItem({required this.sourceKey, required this.name});
+
+  factory SystemCatalogItem.fromJson(Map<String, dynamic> json) {
+    return SystemCatalogItem(
+      sourceKey: json['sourceKey'] ?? '',
+      name: json['name'] ?? '',
+    );
   }
 }

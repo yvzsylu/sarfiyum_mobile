@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/secure_storage_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
-  final _storage = const FlutterSecureStorage();
 
   User? _user;
   bool _isLoading = false;
@@ -14,23 +13,28 @@ class AuthProvider with ChangeNotifier {
   User? get user => _user;
   bool get isAuthenticated => _user != null;
   bool get isLoading => _isLoading;
-  String? get userRole => _user?.roles?.firstOrNull;
+  bool get isViewer => _user?.isViewer ?? false;
 
+  // --- 1. LOGIN ---
   Future<String?> login(String username, String password) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // 🔥 DEĞİŞİKLİK: Servise 3. parametre olarak 2 (Mobile) gönderiyoruz.
       final result = await _authService.login(username, password, 2);
 
       if (result.isSuccess && result.data != null) {
         final token = result.data!;
-
-        await _storage.write(key: 'jwt_token', value: token);
-
         Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
         _user = User.fromJwt(decodedToken, token);
+
+        // 🔥 DEĞİŞİKLİK 1: Token'ı API istekleri için kaydediyoruz.
+        await SecureStorageService().saveToken(token);
+
+        // 🔥 DEĞİŞİKLİK 2: ROL FARK ETMEKSİZİN BİLGİLERİ KAYDET
+        // İster User olsun, ister Viewer; "Çıkış Yap" dese bile
+        // bir sonraki girişte bilgiler hazır olsun istiyoruz.
+        await SecureStorageService().saveCredentials(username, password);
 
         return null; // Başarılı
       } else {
@@ -48,27 +52,50 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // App açılınca otomatik giriş
-  Future<void> tryAutoLogin() async {
-    final token = await _storage.read(key: 'jwt_token');
+  // --- 2. OTOMATİK GİRİŞ (App Açılışı) ---
+  Future<bool> tryAutoLogin() async {
+    final token = await SecureStorageService().getToken();
+
     if (token != null && !JwtDecoder.isExpired(token)) {
       Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-      _user = User.fromJwt(decodedToken, token);
+      final tempUser = User.fromJwt(decodedToken, token);
+
+      // Viewer ise token geçerli olsa bile otomatik içeri alma.
+      // Login ekranına düşsün, bilgiler zaten dolu gelecek.
+      if (tempUser.isViewer) {
+        await SecureStorageService().deleteToken();
+        return false;
+      }
+
+      // Normal User ise içeri al
+      _user = tempUser;
       notifyListeners();
+      return true;
     }
+    return false;
   }
 
-  // void logout() async {  <-- ESKİSİ (Bunu değiştir)
+  // --- 3. MANUEL LOGOUT (Butona Basınca) ---
   Future<void> logout() async {
-    // <-- YENİSİ (Future<void> yap)
     _user = null;
     _isLoading = false;
 
-    // Sadece token'ı değil, varsa her şeyi sil (Daha güvenli)
-    // await _storage.delete(key: 'jwt_token');
-    await _storage.deleteAll();
+    // 🔥 DEĞİŞİKLİK 3: Sadece Token'ı siliyoruz!
+    // 'clearAll()' yaparsak kayıtlı şifreler de gider.
+    // 'deleteToken()' yaparsak sadece oturum düşer, şifreler kalır.
+    await SecureStorageService().deleteToken();
 
     notifyListeners();
+  }
+
+  // --- 4. ARKA PLAN LOGOUT (Sadece Viewer) ---
+  void logoutForBackground() {
+    if (isViewer) {
+      _user = null;
+      // Token'ı sil, oturum düşsün.
+      SecureStorageService().deleteToken();
+      notifyListeners();
+    }
   }
 
   Future<String?> forgotPassword(String email) async {
@@ -77,7 +104,6 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final result = await _authService.resetPassword(email);
-
       if (result.isSuccess) {
         return null;
       } else {

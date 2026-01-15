@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/service_result.dart';
+// 🔥 YENİ SERVİSİ EKLEDİK
+import 'package:sarfiyum_mobile/services/secure_storage_service.dart';
 
 class BaseApiService {
   final Dio _dio = Dio(
@@ -9,21 +10,23 @@ class BaseApiService {
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {"Content-Type": "application/json"},
-      // ÖNEMLİ: 400 ve 401 hatalarını Dio'nun otomatik fırlatmasını engelliyoruz.
-      // Böylece cevabı kendimiz ServiceResult olarak işleyebiliriz.
       validateStatus: (status) {
         return status != null && status < 500;
       },
     ),
   );
 
-  final _storage = const FlutterSecureStorage();
+  // Eski storage nesnesine gerek kalmadı, servisten çekeceğiz.
+  // final _storage = const FlutterSecureStorage();
 
   BaseApiService() {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await _storage.read(key: 'jwt_token');
+          // 🔥 DEĞİŞİKLİK BURADA: Token'ı merkezi servisten alıyoruz.
+          // Böylece AuthProvider'ın kaydettiği token'ı kesin buluruz.
+          final token = await SecureStorageService().getToken();
+
           if (token != null) {
             options.headers["Authorization"] = "Bearer $token";
           }
@@ -35,6 +38,8 @@ class BaseApiService {
       ),
     );
   }
+
+  // 👇 AŞAĞISINA DOKUNMADIM, AYNI KALACAK 👇
 
   Future<ServiceResult<T>> put<T>(String endpoint, dynamic data) async {
     try {
@@ -123,21 +128,17 @@ class BaseApiService {
     Response response,
     T Function(Object?)? fromJson,
   ) {
-    // 1. Backend ServiceResult formatında JSON döndüyse
     if (response.data != null && response.data is Map<String, dynamic>) {
       final json = response.data as Map<String, dynamic>;
 
-      // Backend'den gelen 'isSuccess' false ise veya 'errors' doluysa
       if (json['isSuccess'] == false ||
           (json['errors'] != null && (json['errors'] as List).isNotEmpty)) {
         return ServiceResult.fromJson(json, (data) => data as T);
       }
 
-      // Başarılı durum
       return ServiceResult.fromJson(json, fromJson);
     }
 
-    // 2. Beklenmedik bir format geldiyse
     return ServiceResult<T>(
       isSuccess: false,
       statusCode: response.statusCode ?? 500,
@@ -149,34 +150,27 @@ class BaseApiService {
     List<String> errors = [];
     String defaultError = "Bağlantı hatası oluştu.";
 
-    // Backend'den bir cevap geldiyse (400, 401, 404 vs.)
     if (e.response != null && e.response?.data != null) {
       try {
         final data = e.response!.data;
 
-        // Eğer data Map ise (JSON)
         if (data is Map<String, dynamic>) {
-          // ServiceResult içindeki 'errors' dizisine bak
           if (data['errors'] != null) {
             if (data['errors'] is List) {
               errors = List<String>.from(data['errors']);
             } else if (data['errors'] is String) {
               errors.add(data['errors']);
             }
-          }
-          // Bazen backend sadece 'message' döner
-          else if (data['message'] != null) {
+          } else if (data['message'] != null) {
             errors.add(data['message']);
           }
         } else if (data is String) {
-          // Backend direkt string hata döndüyse
           errors.add(data);
         }
       } catch (_) {
         errors.add(defaultError);
       }
     } else {
-      // İnternet yoksa veya sunucu kapalıysa
       errors.add(e.message ?? defaultError);
     }
 

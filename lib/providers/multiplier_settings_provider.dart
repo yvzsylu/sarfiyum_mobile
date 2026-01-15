@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/base_api_service.dart'; // BaseApiService yolunu kendine göre ayarla
-import '../models/multiplier_models.dart'; // Modellerin olduğu dosya
-import '../models/service_result.dart'; // ServiceResult modelin
+import '../services/base_api_service.dart';
+import '../models/multiplier_models.dart';
+import '../models/service_result.dart';
 
 class MultiplierSettingsProvider with ChangeNotifier {
   final BaseApiService _api = BaseApiService();
@@ -57,12 +57,13 @@ class MultiplierSettingsProvider with ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
+    // DTO'nun toJson metodunda showOnWeb/showOnMobile olduğundan emin ol
     final result = await _api.post("customer/product/create", dto.toJson());
 
     isLoading = false;
 
     if (result.isSuccess) {
-      await loadData();
+      await loadData(); // Listeyi yenile
       notifyListeners();
       return true;
     } else {
@@ -72,40 +73,64 @@ class MultiplierSettingsProvider with ChangeNotifier {
     }
   }
 
-  // --- 3. ÜRÜN GÜNCELLEME (TEKLİ VEYA ÇOKLU - ANGULAR MANTIĞI) ---
-  // Angular'daki saveEditedProduct ve saveAll burayı kullanır.
-  // Tek bir ürün güncellenecekse liste içinde tek eleman gönderilir.
+  // --- 3. KATALOG LİSTESİNİ ÇEK ---
+  Future<List<SystemCatalogItem>> getSystemCatalog() async {
+    try {
+      final dynamic response = await _api.get<dynamic>(
+        "customer/product/catalog-list",
+      );
+
+      if (response is List) {
+        return (response as List)
+            .map((e) => SystemCatalogItem.fromJson(e))
+            .toList();
+      }
+
+      if (response is ServiceResult) {
+        if (response.isSuccess &&
+            response.data != null &&
+            response.data is List) {
+          final list = response.data as List;
+          return list.map((e) => SystemCatalogItem.fromJson(e)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Katalog çekme hatası: $e");
+      return [];
+    }
+  }
+
+  // --- 4. ÜRÜN GÜNCELLEME (TOPLU) ---
   Future<bool> updateProducts(List<TenantProduct> products) async {
     isLoading = true;
     notifyListeners();
 
-    // DTO Dönüşümü ve Kredi Kartı Kontrolü
     List<Map<String, dynamic>> updatePayload = products.map((item) {
-      // Eğer kategori "Kredi Kartı" ise alış çarpanını zorla 0 yapıyoruz
       if (item.categoryName == "Kredi Kartı") {
         item.buyMultiplier = 0;
       }
-
-      // Backend'in beklediği UpdateTenantProductDto formatına çeviriyoruz
       return {
         "id": item.id,
         "name": item.name,
-        "categoryId": item.categoryId, // Modelde categoryId olduğundan emin ol
+        "categoryId": item.categoryId,
         "sourceKey": item.sourceKey,
         "buyMultiplier": item.buyMultiplier,
         "sellMultiplier": item.sellMultiplier,
         "addonAmount": item.addonAmount,
         "isActive": item.isActive,
+        // 🔥 GÜNCELLEME: Platform ayarları eklendi
+        "showOnWeb": item.showOnWeb,
+        "showOnMobile": item.showOnMobile,
       };
     }).toList();
 
-    // Angular'daki gibi 'update-all' endpointine atıyoruz
     final result = await _api.put("customer/product/update-all", updatePayload);
 
     isLoading = false;
 
     if (result.isSuccess) {
-      await loadData(); // Listeyi yenile
+      await loadData();
       notifyListeners();
       return true;
     } else {
@@ -115,15 +140,24 @@ class MultiplierSettingsProvider with ChangeNotifier {
     }
   }
 
-  // --- 4. SİLME ---
-  Future<void> deleteProduct(String id) async {
-    _removeProductFromLocal(id); // UI'dan hemen sil
-
-    await _api.delete("customer/product/$id");
-    // Hata yönetimi gerekirse eklenebilir ama genelde silme işlemi başarılı kabul edilir.
+  // --- 🔥 5. PLATFORM TOGGLE METODLARI (YENİ) ---
+  Future<void> toggleWebStatus(String id) async {
+    await _api.patch("customer/product/toggle-web/$id", {});
+    // UI zaten optimistic update ile güncellendiği için burada loadData yapmaya gerek yok
+    // ama istersen yapabilirsin.
   }
 
-  // --- 5. SIRALAMA ---
+  Future<void> toggleMobileStatus(String id) async {
+    await _api.patch("customer/product/toggle-mobile/$id", {});
+  }
+
+  // --- 6. SİLME ---
+  Future<void> deleteProduct(String id) async {
+    _removeProductFromLocal(id);
+    await _api.delete("customer/product/$id");
+  }
+
+  // --- 7. SIRALAMA ---
   Future<void> updateSortOrder(String categoryName) async {
     if (!groupedProducts.containsKey(categoryName)) return;
 
@@ -138,7 +172,7 @@ class MultiplierSettingsProvider with ChangeNotifier {
     await _api.patch("customer/product/reorder", orderPayload);
   }
 
-  // --- LOCAL HELPERS ---
+  // --- YARDIMCI METODLAR ---
   void reorderLocalList(String category, int oldIndex, int newIndex) {
     if (!groupedProducts.containsKey(category)) return;
     final list = groupedProducts[category]!;
@@ -152,11 +186,9 @@ class MultiplierSettingsProvider with ChangeNotifier {
   void _groupData(List<TenantProduct> products) {
     groupedProducts.clear();
     for (var item in products) {
-      // Backendden categoryName gelmezse veya null ise 'Diğer' yap
       String catName = item.categoryName.isNotEmpty
           ? item.categoryName
           : 'Diğer';
-
       if (!groupedProducts.containsKey(catName)) {
         groupedProducts[catName] = [];
       }

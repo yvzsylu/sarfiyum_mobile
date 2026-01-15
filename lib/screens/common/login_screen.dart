@@ -3,10 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sarfiyum_mobile/screens/common/reset_password_screen.dart';
 import '../../providers/auth_provider.dart';
+import 'package:sarfiyum_mobile/services/secure_storage_service.dart';
 
-// 🔥 ÖNEMLİ: Dashboard ekranının olduğu dosyayı import ettik.
-// Eğer dosya yolun farklıysa (örneğin main.dart ise) burayı düzelt.
+// Dashboard importları
 import 'package:sarfiyum_mobile/screens/user/user_dashboard.dart';
+import 'package:sarfiyum_mobile/screens/admin/admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +20,28 @@ class _LoginScreenState extends State<LoginScreen> {
   final _userController = TextEditingController();
   final _passController = TextEditingController();
 
-  bool _obscureText = true;
+  // 🔥 Şifre gösterme özelliği iptal, her zaman gizli.
+  final bool _obscureText = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ekran açılır açılmaz kayıtlı bilgileri kontrol et
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    // Viewer için kayıtlı bilgileri doldur
+    final credentials = await SecureStorageService().getCredentials();
+    if (credentials['username'] != null && credentials['password'] != null) {
+      if (mounted) {
+        setState(() {
+          _userController.text = credentials['username']!;
+          _passController.text = credentials['password']!;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,25 +97,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // 4. ŞİFRE ALANI
+                // 4. ŞİFRE ALANI (GÖZ İKONU YOK)
                 TextField(
                   controller: _passController,
-                  obscureText: _obscureText,
+                  obscureText: _obscureText, // Hep true
                   decoration: InputDecoration(
                     prefixIcon: const Icon(
                       Icons.lock_outline,
                       color: Color(0xFF222831),
                     ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureText ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureText = !_obscureText;
-                        });
-                      },
-                    ),
+                    // suffixIcon kaldırıldı
                     labelText: "Şifre",
                     filled: true,
                     fillColor: Colors.grey[100],
@@ -128,41 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     onPressed: authProvider.isLoading
                         ? null
-                        : () async {
-                            // Klavyeyi kapat
-                            FocusScope.of(context).unfocus();
-
-                            // Giriş işlemini başlat
-                            String? error = await authProvider.login(
-                              _userController.text,
-                              _passController.text,
-                            );
-
-                            // Hata yoksa (Giriş Başarılı)
-                            if (error == null) {
-                              Fluttertoast.showToast(
-                                msg: "Giriş Başarılı, Yönlendiriliyorsunuz...",
-                                backgroundColor: Colors.green,
-                                textColor: Colors.white,
-                              );
-
-                              // 🔥 YÖNLENDİRME KODU BURADA 🔥
-                              if (mounted) {
-                                Navigator.of(context).pushReplacement(
-                                  MaterialPageRoute(
-                                    builder: (context) => const UserDashboard(),
-                                  ),
-                                );
-                              }
-                            } else {
-                              // Hata varsa
-                              Fluttertoast.showToast(
-                                msg: error,
-                                backgroundColor: Colors.redAccent,
-                                textColor: Colors.white,
-                              );
-                            }
-                          },
+                        : () => _handleLogin(authProvider),
                     child: authProvider.isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
@@ -200,7 +179,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 5),
 
-                // VERSİYON
                 Text(
                   "v1.0.0",
                   style: TextStyle(color: Colors.grey[400], fontSize: 12),
@@ -211,5 +189,65 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  // 🔥 GİRİŞ VE YÖNLENDİRME FONKSİYONU
+  // 🔥 GÜNCELLENMİŞ NAVIGASYON MANTIĞI
+  Future<void> _handleLogin(AuthProvider authProvider) async {
+    FocusScope.of(context).unfocus();
+
+    String? error = await authProvider.login(
+      _userController.text.trim(),
+      _passController.text.trim(),
+    );
+
+    if (error == null) {
+      Fluttertoast.showToast(
+        msg: "Giriş Başarılı, Yönlendiriliyorsunuz...",
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+
+      if (mounted && authProvider.user != null) {
+        final roles = authProvider.user!.roles ?? [];
+
+        // Debug için konsola basalım
+        print("➡️ Yönlendirme Kontrolü - Roller: $roles");
+
+        Widget targetScreen;
+
+        // 1. ADMIN KONTROLÜ
+        if (roles.any((r) => r.toLowerCase() == 'admin')) {
+          print("➡️ Admin tespit edildi -> AdminDashboard");
+          targetScreen = const AdminDashboard();
+        }
+        // 2. USER veya VIEWER KONTROLÜ (Büyük/Küçük harf duyarsız)
+        else if (roles.any(
+          (r) => r.toLowerCase() == 'user' || r.toLowerCase() == 'viewer',
+        )) {
+          print("➡️ User/Viewer tespit edildi -> UserDashboard");
+          targetScreen = const UserDashboard();
+        }
+        // 3. FALLBACK (Hata olmaması için, giriş yaptıysa UserDashboard'ı varsayılan yapalım)
+        else {
+          print(
+            "➡️ Tanımsız Rol (Visitor?) -> Varsayılan olarak UserDashboard açılıyor.",
+          );
+          // Eskiden VisitorDashboard idi, şimdi UserDashboard yapalım ki sayfa açılsın.
+          targetScreen = const UserDashboard();
+        }
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => targetScreen),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } else {
+      Fluttertoast.showToast(
+        msg: error,
+        backgroundColor: Colors.redAccent,
+        textColor: Colors.white,
+      );
+    }
   }
 }

@@ -23,41 +23,64 @@ class User {
     this.token,
   });
 
-  // JWT Payload'ından User nesnesi üretir
   factory User.fromJwt(Map<String, dynamic> payload, String token) {
+    // 🔥 DEBUG İÇİN KONSOLA BASIYORUZ (Debug Console'a bak)
+    print("---------------- JWT ANALİZİ ----------------");
+    print("Gelen Payload: $payload");
+
+    // Olası tüm rol anahtarlarını kontrol edelim
+    var rawRoles =
+        payload['roles'] ??
+        payload['role'] ??
+        payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+
+    print("Ham Rol Verisi (Raw): $rawRoles");
+
+    final parsedRoles = _parseRoles(rawRoles);
+    print("İşlenmiş Roller (Parsed): $parsedRoles");
+    print("---------------------------------------------");
+
     return User(
       userId: payload['userId'],
-      username: payload['sub'], // 'sub' genelde username'dir
+      username: payload['sub'],
       email: payload['email'],
       fullName: payload['fullName'],
       tenantId: payload['tenantId'],
       tenantName: payload['tenantName'],
-      tenantLogoUrl: payload['tenantLogoUrl'], // Göreceli yol gelir: /uploads/logos/...
-      subscriptionEndDate: payload['subscriptionEndDate'] != null 
-          ? DateTime.tryParse(payload['subscriptionEndDate']) 
+      tenantLogoUrl: payload['tenantLogoUrl'],
+      subscriptionEndDate: payload['subscriptionEndDate'] != null
+          ? DateTime.tryParse(payload['subscriptionEndDate'])
           : null,
-      roles: _parseRoles(payload['roles']),
+      roles: parsedRoles,
       token: token,
     );
   }
 
-  // Role bazen "User" (String) bazen ["Admin", "User"] (List) gelebilir.
+  // Yardımcı Getter (Büyük/Küçük harf duyarsız kontrol)
+  bool get isViewer {
+    if (roles == null) return false;
+    return roles!.any((r) => r.toLowerCase() == 'viewer');
+  }
+
   static List<String> _parseRoles(dynamic roleData) {
     if (roleData == null) return ['Visitor'];
-    
+
+    List<String> parsedList = [];
+
     if (roleData is List) {
-      return roleData.map((e) => e.toString()).toList();
+      parsedList = roleData.map((e) => e.toString().trim()).toList();
     } else if (roleData is String) {
-      // Virgülle ayrılmış birden fazla rol gelme ihtimaline karşı (Admin,User gibi)
       if (roleData.contains(',')) {
-        return roleData.split(',').map((e) => e.trim()).toList();
+        parsedList = roleData.split(',').map((e) => e.trim()).toList();
+      } else {
+        parsedList = [roleData.trim()];
       }
-      return [roleData];
     }
-    return ['Visitor'];
+
+    if (parsedList.isEmpty) return ['Visitor'];
+    return parsedList;
   }
-  
-  // Profil fotosu için tam URL'i veren yardımcı get metodu
+
   String get fullLogoUrl {
     if (tenantLogoUrl == null) return "";
     return "https://sarfiyum.com$tenantLogoUrl";
