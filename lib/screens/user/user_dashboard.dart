@@ -226,7 +226,7 @@ class _UserDashboardState extends State<UserDashboard>
                 : _buildTabContent(catProvider.categories, goldProvider.prices),
           ),
 
-          // 3. ALT SEKMELER (TAB BAR)
+          // 3. ALT SEKMELER (TAB BAR) - DÜZELTİLMİŞ KISIM
           if (!catProvider.isLoading &&
               catProvider.categories.isNotEmpty &&
               _tabController != null)
@@ -308,7 +308,7 @@ class _UserDashboardState extends State<UserDashboard>
                 ),
               ),
               Expanded(
-                flex: 3, // Oranı biraz artırdık rahat sığsın
+                flex: 3,
                 child: Text(
                   "Alış",
                   textAlign: TextAlign.right,
@@ -320,7 +320,7 @@ class _UserDashboardState extends State<UserDashboard>
                 ),
               ),
               Expanded(
-                flex: 3, // Oranı biraz artırdık rahat sığsın
+                flex: 3,
                 child: Text(
                   "Satış",
                   textAlign: TextAlign.right,
@@ -355,10 +355,10 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
-  // 🔥 TAB BAR ALANI (ÇİZGİ KALDIRILDI)
+  // 🔥 TAB BAR ALANI (DÜZELTİLDİ: Sığdırma ve Büyüklük)
   Widget _buildBottomTabBar(List<Category> categories) {
     return Container(
-      height: 70,
+      height: 70, // Yükseklik biraz daha rahat olsun
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.black12, width: 0.5)),
@@ -366,14 +366,12 @@ class _UserDashboardState extends State<UserDashboard>
       child: SafeArea(
         child: TabBar(
           controller: _tabController,
-          isScrollable: false, // 5 Eşit parça
-          // 🔥 ÇİZGİYİ KALDIRAN KISIM BURASI
-          indicator: const BoxDecoration(), // Boş dekorasyon = Çizgi yok
-          dividerColor: Colors.transparent, // Alt ayraç rengi şeffaf
-
+          isScrollable: false, // Eşit dağılım
+          indicator: const BoxDecoration(), // Çizgi yok
+          dividerColor: Colors.transparent,
           labelColor: const Color(0xFF161A30),
           unselectedLabelColor: Colors.grey,
-          labelPadding: EdgeInsets.zero,
+          labelPadding: EdgeInsets.zero, // Padding'i sıfırladık
           onTap: (index) {
             setState(() => _selectedCategoryIndex = index);
           },
@@ -381,18 +379,20 @@ class _UserDashboardState extends State<UserDashboard>
             return Tab(
               height: 70,
               child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                    child: Text(
-                      cat.name.replaceAll('i', 'İ').toUpperCase(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
+                // 🔥 FittedBox: Yazı sığmazsa küçülür ama tek satırda kalır
+                // Eğer çok uzunsa alt satıra geçmesi için Text ayarları aşağıda
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                  child: Text(
+                    cat.name.replaceAll('i', 'İ').toUpperCase(),
+                    textAlign: TextAlign.center, // Ortala
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13, // Standart boyut
+                      height: 1.2, // Satır aralığı
                     ),
+                    maxLines: 2, // Gerekirse 2 satır olsun
+                    overflow: TextOverflow.ellipsis, // Taşarsa ...
                   ),
                 ),
               ),
@@ -403,7 +403,7 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
-  // 🔥 ÜRÜN KARTI (Oklar ve Overflow Hatası Giderilmiş Hali)
+  // Fiyat Kartı
   Widget _buildPriceCard(PriceData item) {
     final bool isCurrency = item.category.contains("Döviz");
     final formatter = NumberFormat(
@@ -425,7 +425,7 @@ class _UserDashboardState extends State<UserDashboard>
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       child: Row(
         children: [
-          // 1. SOL: SEMBOL
+          // SEMBOL
           Expanded(
             flex: 3,
             child: Column(
@@ -454,20 +454,19 @@ class _UserDashboardState extends State<UserDashboard>
             ),
           ),
 
-          // 2. ORTA: ALIŞ FİYATI + OK (Hatasız)
+          // ALIŞ
           Expanded(
-            flex: 3, // Flex artırıldı, yer açıldı
+            flex: 3,
             child: _buildPriceCell(
               priceText: isCreditCard ? "" : formatter.format(item.bid),
-              // Eğer modelde bid için ayrı yön varsa onu kullan, yoksa genel yönü kullan
               isUp: item.isAskUp,
               hasArrow: !isCreditCard,
             ),
           ),
 
-          // 3. SAĞ: SATIŞ FİYATI + OK (Hatasız)
+          // SATIŞ
           Expanded(
-            flex: 3, // Flex artırıldı, yer açıldı
+            flex: 3,
             child: _buildPriceCell(
               priceText: formatter.format(item.ask),
               isUp: item.isAskUp,
@@ -479,21 +478,16 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
-  // 🔥 YENİ: Fiyat ve Ok Hücresini Çizen Yardımcı Metod (Kod tekrarını ve hataları önler)
   Widget _buildPriceCell({
     required String priceText,
     required bool isUp,
     required bool hasArrow,
   }) {
-    // Renk ve İkon Seçimi
     Color trendColor = isUp ? Colors.green : Colors.red;
     IconData trendIcon = isUp ? Icons.arrow_drop_up : Icons.arrow_drop_down;
-
-    // Fiyat Rengi
     Color valueColor = const Color(0xFF2C3E50);
 
     return FittedBox(
-      // 🔥 FittedBox: Yazı sığmazsa otomatik küçülür, "flowed by pixels" hatasını çözer.
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerRight,
       child: Row(
@@ -516,7 +510,6 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
-  // Header Tasarımı (Değişmedi)
   Widget _buildHeaderItem(PriceData item) {
     final formatter = NumberFormat("#,##0.000", "tr_TR");
 
