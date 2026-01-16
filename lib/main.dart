@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sarfiyum_mobile/providers/tenant_settings_provider.dart';
@@ -6,6 +7,7 @@ import 'package:sarfiyum_mobile/providers/category_settings_provider.dart';
 import 'package:sarfiyum_mobile/providers/profile_provider.dart';
 import 'package:sarfiyum_mobile/providers/viewer_provider.dart';
 import 'package:sarfiyum_mobile/services/secure_storage_service.dart';
+import 'package:sarfiyum_mobile/services/base_api_service.dart';
 
 // Providers
 import 'providers/auth_provider.dart';
@@ -16,14 +18,13 @@ import 'providers/multiplier_settings_provider.dart';
 import 'screens/common/login_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'screens/user/user_dashboard.dart';
-// import 'screens/visitor/visitor_dashboard.dart'; // 🔥 GEREK KALMADI, SİLEBİLİRSİN
+
+// 🔥 1. GLOBAL KEY TANIMLA (En tepeye)
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 1. SİLİNME KONTROLÜ (Fresh Install Check)
   await _checkFreshInstall();
-
   runApp(const MyApp());
 }
 
@@ -51,6 +52,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TenantSettingsProvider()),
       ],
       child: MaterialApp(
+        // 🔥 2. NAVIGATOR KEY'İ BURAYA EKLE
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Sarfiyum Mobile',
         theme: ThemeData(
@@ -92,13 +95,13 @@ class _LifecycleManagerState extends State<LifecycleManager>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // Uygulama arka plana atıldıysa (Paused)
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
+    // Uygulama arka plana geçtiğinde (Home tuşu, başka uygulama açma vs.)
+    if (state == AppLifecycleState.paused) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
 
-      // 🔥 SADECE VIEWER İSE OTURUMU KAPAT 🔥
+      // 🔥 SADECE VIEWER İSE BEKLEMEDEN ANINDA LOGOUT 🔥
       if (auth.isViewer) {
+        print("👀 Viewer arka plana geçti. Anında çıkış yapılıyor.");
         auth.logoutForBackground();
       }
     }
@@ -120,6 +123,24 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _isInit = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 🔥 API'den 401 gelirse (Oturum başka yerde açıldı) AuthProvider'ı tetikle
+    BaseApiService.onTokenExpired = () {
+      print("🚨 API Callback Tetiklendi: Global Logout başlatılıyor.");
+
+      // Navigator key üzerinden mevcut context'i bul
+      final context = navigatorKey.currentContext;
+
+      if (context != null) {
+        // Provider'a ulaş ve logout yap
+        Provider.of<AuthProvider>(context, listen: false).handleUnauthorized();
+      }
+    };
+  }
 
   @override
   void didChangeDependencies() {
@@ -151,23 +172,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return const LoginScreen();
     }
 
-    // 🔥 GÜNCELLENMİŞ ROL KONTROLÜ VE YÖNLENDİRME 🔥
     final roles = auth.user!.roles ?? [];
 
-    // 1. Admin Kontrolü
     if (roles.any((r) => r.toLowerCase() == 'admin')) {
       return const AdminDashboard();
-    }
-    // 2. User VEYA Viewer Kontrolü (İkisi de UserDashboard'a gider)
-    // CustomDrawer içindeki kod, Viewer ise menüleri gizler.
-    else if (roles.any(
+    } else if (roles.any(
       (r) => r.toLowerCase() == 'user' || r.toLowerCase() == 'viewer',
     )) {
       return const UserDashboard();
-    }
-    // 3. Fallback (Tanımsız rol varsa güvenli olan UserDashboard'a atalım)
-    else {
-      // return const VisitorDashboard(); // Buna gerek kalmadı
+    } else {
       return const UserDashboard();
     }
   }

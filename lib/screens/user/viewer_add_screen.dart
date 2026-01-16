@@ -11,6 +11,9 @@ class ViewerAddScreen extends StatefulWidget {
 }
 
 class _ViewerAddScreenState extends State<ViewerAddScreen> {
+  // 🔥 TEMA RENGİ
+  final Color _primaryColor = const Color(0xFF161A30);
+
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
@@ -27,71 +30,187 @@ class _ViewerAddScreenState extends State<ViewerAddScreen> {
     final provider = context.watch<ViewerProvider>();
 
     return Scaffold(
+      backgroundColor: Colors.white, // Arka plan beyaz
       appBar: AppBar(
-        title: const Text("Yeni Kullanıcı Ekle"),
-        backgroundColor: const Color(0xFF161A30), // Lacivert Header
-        foregroundColor: Colors.white, // Beyaz Yazı
-        elevation: 0,
-        scrolledUnderElevation: 0, // 👈 ÖNEMLİ
-      ),
-      backgroundColor: Colors.grey[100],
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              _buildTextField("Ad Soyad", _fullNameCtrl, Icons.person),
-              const SizedBox(height: 15),
-              _buildTextField(
-                "Kullanıcı Adı",
-                _usernameCtrl,
-                Icons.alternate_email,
-                minLength: 3,
-              ),
-              const SizedBox(height: 15),
-              _buildTextField(
-                "E-Posta",
-                _emailCtrl,
-                Icons.email,
-                isEmail: true,
-              ),
-              const SizedBox(height: 25),
-              const Text(
-                "Güvenlik",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF161A30),
-                ),
-              ),
-              const SizedBox(height: 15),
-              _buildPasswordField("Şifre", _passwordCtrl),
-              const SizedBox(height: 15),
-              _buildPasswordField(
-                "Şifre Tekrar",
-                _confirmPassCtrl,
-                isConfirm: true,
-              ),
-
-              const SizedBox(height: 30),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D1B46),
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: provider.isLoading ? null : _submit,
-                  child: provider.isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("KAYDET"),
-                ),
-              ),
-            ],
+        title: const Text(
+          "YENİ KULLANICI",
+          style: TextStyle(
+            fontWeight: FontWeight.w900, // Kalın Font
+            letterSpacing: 1.5,
+            color: Colors.white,
           ),
+        ),
+        centerTitle: true,
+        // 🔥 HEADER GRADIENT
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_primaryColor, const Color(0xFF243B55)],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // --- HEADER ALTINDAKİ BİLGİ ALANI (DÜZ & TAM GENİŞLİK) ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  // AppBar ile bütünlük sağlayan renkler
+                  colors: [const Color(0xFF243B55), const Color(0xFF243B55)],
+                ),
+                // Düz çizgi
+                border: const Border(
+                  bottom: BorderSide(color: Colors.white10, width: 1),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.person_add_outlined,
+                    color: Colors.white.withOpacity(0.8),
+                    size: 28,
+                  ),
+                  const SizedBox(width: 15),
+                  const Expanded(
+                    child: Text(
+                      "Sisteme erişim sağlayacak yeni bir alt kullanıcı oluşturun.",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // --- FORM ALANI ---
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  // Modern Gölge
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Kişisel Bilgiler",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      _buildTextField(
+                        "Ad Soyad",
+                        _fullNameCtrl,
+                        Icons.person_outline_rounded,
+                      ),
+                      const SizedBox(height: 15),
+                      _buildTextField(
+                        "Kullanıcı Adı",
+                        _usernameCtrl,
+                        Icons.alternate_email_rounded,
+                        minLength: 3,
+                      ),
+                      const SizedBox(height: 15),
+                      _buildTextField(
+                        "E-Posta",
+                        _emailCtrl,
+                        Icons.email_outlined,
+                        isEmail: true,
+                      ),
+
+                      const SizedBox(height: 25),
+                      const Divider(),
+                      const SizedBox(height: 15),
+
+                      const Text(
+                        "Güvenlik",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      _buildPasswordField("Şifre", _passwordCtrl),
+                      const SizedBox(height: 15),
+                      _buildPasswordField(
+                        "Şifre Tekrar",
+                        _confirmPassCtrl,
+                        isConfirm: true,
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 4,
+                            shadowColor: _primaryColor.withOpacity(0.4),
+                          ),
+                          onPressed: provider.isLoading ? null : _submit,
+                          child: provider.isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  "KAYDET",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -139,10 +258,29 @@ class _ViewerAddScreenState extends State<ViewerAddScreen> {
     return TextFormField(
       controller: ctrl,
       keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
+      style: const TextStyle(fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+        prefixIcon: Icon(icon, color: _primaryColor.withOpacity(0.7)),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: _primaryColor, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
       validator: (value) {
         if (value == null || value.isEmpty) return "$label zorunludur";
@@ -163,14 +301,41 @@ class _ViewerAddScreenState extends State<ViewerAddScreen> {
     return TextFormField(
       controller: ctrl,
       obscureText: _obscurePass,
+      style: const TextStyle(fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: const Icon(Icons.lock),
+        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+        prefixIcon: Icon(
+          Icons.lock_outline_rounded,
+          color: _primaryColor.withOpacity(0.7),
+        ),
         suffixIcon: IconButton(
-          icon: Icon(_obscurePass ? Icons.visibility : Icons.visibility_off),
+          icon: Icon(
+            _obscurePass
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+            color: Colors.grey,
+          ),
           onPressed: () => setState(() => _obscurePass = !_obscurePass),
         ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: _primaryColor, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
       validator: (value) {
         if (isConfirm && value != _passwordCtrl.text)

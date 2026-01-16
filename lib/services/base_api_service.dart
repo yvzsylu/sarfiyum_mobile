@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import '../models/service_result.dart';
-// 🔥 YENİ SERVİSİ EKLEDİK
 import 'package:sarfiyum_mobile/services/secure_storage_service.dart';
 
 class BaseApiService {
+  // 🔥 Global Callback: 401 (Unauthorized) alındığında main.dart burayı tetikleyecek.
+  static Function? onTokenExpired;
+
   final Dio _dio = Dio(
     BaseOptions(
       baseUrl: "https://sarfiyum.com/api",
@@ -11,35 +13,38 @@ class BaseApiService {
       receiveTimeout: const Duration(seconds: 10),
       headers: {"Content-Type": "application/json"},
       validateStatus: (status) {
+        // 500 altındaki hataları biz işleyeceğiz (400, 401 vb.)
         return status != null && status < 500;
       },
     ),
   );
 
-  // Eski storage nesnesine gerek kalmadı, servisten çekeceğiz.
-  // final _storage = const FlutterSecureStorage();
-
   BaseApiService() {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // 🔥 DEĞİŞİKLİK BURADA: Token'ı merkezi servisten alıyoruz.
-          // Böylece AuthProvider'ın kaydettiği token'ı kesin buluruz.
+          // Token'ı her istekte ekle
           final token = await SecureStorageService().getToken();
-
           if (token != null) {
             options.headers["Authorization"] = "Bearer $token";
           }
           return handler.next(options);
         },
         onError: (DioException e, handler) {
+          // 🔥 KRİTİK DÜZELTME: Backend session'ı öldürürse API 401 döner.
+          if (e.response?.statusCode == 401) {
+            print("🚨 401 Unauthorized Yakalandı: Oturum sonlandırılıyor.");
+            if (onTokenExpired != null) {
+              onTokenExpired!();
+            }
+          }
           return handler.next(e);
         },
       ),
     );
   }
 
-  // 👇 AŞAĞISINA DOKUNMADIM, AYNI KALACAK 👇
+  // --- CRUD METODLARI (Aynı kaldı) ---
 
   Future<ServiceResult<T>> put<T>(String endpoint, dynamic data) async {
     try {

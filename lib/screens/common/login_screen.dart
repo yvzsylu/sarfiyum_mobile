@@ -17,21 +17,22 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // 🔥 TEMA RENGİ
+  final Color _primaryColor = const Color(0xFF161A30);
+
   final _userController = TextEditingController();
   final _passController = TextEditingController();
 
-  // 🔥 Şifre gösterme özelliği iptal, her zaman gizli.
+  // Şifre her zaman gizli
   final bool _obscureText = true;
 
   @override
   void initState() {
     super.initState();
-    // Ekran açılır açılmaz kayıtlı bilgileri kontrol et
     _loadSavedCredentials();
   }
 
   Future<void> _loadSavedCredentials() async {
-    // Viewer için kayıtlı bilgileri doldur
     final credentials = await SecureStorageService().getCredentials();
     if (credentials['username'] != null && credentials['password'] != null) {
       if (mounted) {
@@ -51,148 +52,181 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: Center(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(30.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // 1. LOGO ALANI
-                Image.asset("assets/images/sarfiyumlogo.png", height: 40),
+          padding: const EdgeInsets.all(30.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 1. LOGO ALANI
+              Image.asset(
+                "assets/images/sarfiyumlogo.png",
+                height: 60, // Biraz büyüttük
+              ),
 
-                const SizedBox(height: 10),
+              const SizedBox(height: 20),
 
-                // 2. ALT BAŞLIK
-                Text(
-                  "Hesabınıza giriş yapın",
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              // 2. BAŞLIKLAR
+              Text(
+                "Hoş Geldiniz",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900, // Kalın
+                  color: _primaryColor,
+                  letterSpacing: 1,
                 ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                "Hesabınıza giriş yapın",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
 
-                const SizedBox(height: 20),
+              const SizedBox(height: 40),
 
-                // 3. KULLANICI ADI
-                TextField(
-                  controller: _userController,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(
-                      Icons.person_outline,
-                      color: Color(0xFF222831),
-                    ),
-                    labelText: "Kullanıcı Adı",
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF222831),
-                        width: 2,
+              // 3. KULLANICI ADI (Modern Input)
+              _buildModernTextField(
+                controller: _userController,
+                label: "Kullanıcı Adı",
+                icon: Icons.person_outline_rounded,
+              ),
+
+              const SizedBox(height: 20),
+
+              // 4. ŞİFRE ALANI (Modern Input)
+              _buildModernTextField(
+                controller: _passController,
+                label: "Şifre",
+                icon: Icons.lock_outline_rounded,
+                isPassword: true,
+              ),
+
+              // ŞİFREMİ UNUTTUM
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ResetPasswordScreen(),
                       ),
+                    );
+                  },
+                  child: Text(
+                    "Şifrenizi mi unuttunuz?",
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
                     ),
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 20),
+              const SizedBox(height: 30),
 
-                // 4. ŞİFRE ALANI (GÖZ İKONU YOK)
-                TextField(
-                  controller: _passController,
-                  obscureText: _obscureText, // Hep true
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(
-                      Icons.lock_outline,
-                      color: Color(0xFF222831),
-                    ),
-                    // suffixIcon kaldırıldı
-                    labelText: "Şifre",
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF222831),
-                        width: 2,
-                      ),
+              // 5. GİRİŞ BUTONU (Modern Stil)
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 8,
+                    shadowColor: _primaryColor.withOpacity(0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // 5. GİRİŞ BUTONU
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF161A30),
-                      foregroundColor: Colors.white,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: authProvider.isLoading
-                        ? null
-                        : () => _handleLogin(authProvider),
-                    child: authProvider.isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            "GİRİŞ YAP",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  onPressed: authProvider.isLoading
+                      ? null
+                      : () => _handleLogin(authProvider),
+                  child: authProvider.isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
                           ),
-                  ),
-                ),
-
-                // 6. ŞİFREMİ UNUTTUM
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ResetPasswordScreen(),
+                        )
+                      : const Text(
+                          "GİRİŞ YAP",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
                         ),
-                      );
-                    },
-                    child: Text(
-                      "Şifrenizi mi unuttunuz?",
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
                 ),
+              ),
 
-                const SizedBox(height: 5),
+              const SizedBox(height: 30),
 
-                Text(
-                  "v1.0.0",
-                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                ),
-              ],
-            ),
+              Text(
+                "v1.0.0",
+                style: TextStyle(color: Colors.grey[400], fontSize: 12),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // 🔥 GİRİŞ VE YÖNLENDİRME FONKSİYONU
-  // 🔥 GÜNCELLENMİŞ NAVIGASYON MANTIĞI
+  // 🔥 MODERN TEXTFIELD HELPER
+  Widget _buildModernTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50, // Hafif gri zemin
+        borderRadius: BorderRadius.circular(16),
+        // Hafif gölge
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: isPassword && _obscureText,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: _primaryColor.withOpacity(0.7)),
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+          filled: true,
+          fillColor: Colors.transparent, // Container rengi kullanılsın
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: _primaryColor, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🔥 GİRİŞ VE YÖNLENDİRME FONKSİYONU (AYNEN KORUNDU)
   Future<void> _handleLogin(AuthProvider authProvider) async {
     FocusScope.of(context).unfocus();
 
@@ -210,30 +244,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (mounted && authProvider.user != null) {
         final roles = authProvider.user!.roles ?? [];
-
-        // Debug için konsola basalım
-        print("➡️ Yönlendirme Kontrolü - Roller: $roles");
-
         Widget targetScreen;
 
-        // 1. ADMIN KONTROLÜ
         if (roles.any((r) => r.toLowerCase() == 'admin')) {
-          print("➡️ Admin tespit edildi -> AdminDashboard");
           targetScreen = const AdminDashboard();
-        }
-        // 2. USER veya VIEWER KONTROLÜ (Büyük/Küçük harf duyarsız)
-        else if (roles.any(
+        } else if (roles.any(
           (r) => r.toLowerCase() == 'user' || r.toLowerCase() == 'viewer',
         )) {
-          print("➡️ User/Viewer tespit edildi -> UserDashboard");
           targetScreen = const UserDashboard();
-        }
-        // 3. FALLBACK (Hata olmaması için, giriş yaptıysa UserDashboard'ı varsayılan yapalım)
-        else {
-          print(
-            "➡️ Tanımsız Rol (Visitor?) -> Varsayılan olarak UserDashboard açılıyor.",
-          );
-          // Eskiden VisitorDashboard idi, şimdi UserDashboard yapalım ki sayfa açılsın.
+        } else {
           targetScreen = const UserDashboard();
         }
 

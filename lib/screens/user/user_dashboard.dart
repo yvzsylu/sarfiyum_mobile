@@ -1,12 +1,15 @@
+import 'dart:async'; // Timer için
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:sarfiyum_mobile/providers/gold_hub_provider.dart';
 import 'package:sarfiyum_mobile/providers/auth_provider.dart';
 import 'package:sarfiyum_mobile/providers/category_settings_provider.dart';
 import 'package:sarfiyum_mobile/models/price_data.dart';
 import 'package:sarfiyum_mobile/models/multiplier_models.dart';
 import 'package:sarfiyum_mobile/widgets/custom_drawer.dart';
+import 'package:sarfiyum_mobile/services/secure_storage_service.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -20,33 +23,77 @@ class _UserDashboardState extends State<UserDashboard>
   TabController? _tabController;
   int _selectedCategoryIndex = 0;
 
+  // 🔥 Token Süresi Sayacı
+  Timer? _tokenExpirationTimer;
+
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
       final goldProvider = Provider.of<GoldHubProvider>(context, listen: false);
       final catProvider = Provider.of<CategorySettingsProvider>(
         context,
         listen: false,
       );
 
-      // 🔥 1. ÖNCE AYARLARI YÜKLE (Filtreleme için kritik)
+      // 1. STATE SIFIRLAMA
+      goldProvider.resetState();
+      goldProvider.addListener(_handleHubChanges);
+
+      // 2. TOKEN SÜRESİ KONTROLÜ
+      _checkTokenExpiration();
+
+      // 3. VERİLERİ YÜKLE
       await goldProvider.loadProductConfigurations();
 
-      // 2. KATEGORİLERİ YÜKLE
       catProvider.loadCategories().then((_) {
         if (mounted && catProvider.categories.isNotEmpty) {
           _initTabController(catProvider.categories.length);
         }
       });
 
-      // 3. EN SON HUB BAŞLAT
+      // 4. BAĞLANTIYI BAŞLAT
       goldProvider.startConnection();
     });
   }
 
+  // Token ve Logout işlemleri
+  void _checkTokenExpiration() async {
+    final token = await SecureStorageService().getToken();
+    if (token != null) {
+      if (JwtDecoder.isExpired(token)) {
+        _forceLogout("Token süresi dolmuş");
+        return;
+      }
+      final expirationDate = JwtDecoder.getExpirationDate(token);
+      final duration = expirationDate.difference(DateTime.now());
+      _tokenExpirationTimer?.cancel();
+      _tokenExpirationTimer = Timer(duration, () {
+        _forceLogout("Token süresi (1 dk) doldu");
+      });
+    }
+  }
+
+  void _forceLogout(String reason) {
+    if (mounted) {
+      Provider.of<AuthProvider>(context, listen: false).handleUnauthorized();
+    }
+  }
+
+  void _handleHubChanges() {
+    if (!mounted) return;
+    final goldProvider = Provider.of<GoldHubProvider>(context, listen: false);
+    if (goldProvider.forceLogoutTriggered) {
+      goldProvider.removeListener(_handleHubChanges);
+      _forceLogout("SignalR Kick");
+    }
+  }
+
   void _initTabController(int length) {
+    if (!mounted) return;
     setState(() {
       _tabController = TabController(length: length, vsync: this);
       _tabController!.addListener(() {
@@ -61,6 +108,12 @@ class _UserDashboardState extends State<UserDashboard>
 
   @override
   void dispose() {
+    _tokenExpirationTimer?.cancel();
+    try {
+      final goldProvider = Provider.of<GoldHubProvider>(context, listen: false);
+      goldProvider.removeListener(_handleHubChanges);
+      goldProvider.stopConnection();
+    } catch (_) {}
     _tabController?.dispose();
     super.dispose();
   }
@@ -88,15 +141,14 @@ class _UserDashboardState extends State<UserDashboard>
   @override
   Widget build(BuildContext context) {
     final goldProvider = context.watch<GoldHubProvider>();
-    final authProvider = context.watch<AuthProvider>();
     final catProvider = context.watch<CategorySettingsProvider>();
-    final user = authProvider.user;
+    final user = Provider.of<AuthProvider>(context).user;
 
     final usdData = _getHeaderData(goldProvider.prices, 'USD');
     final eurData = _getHeaderData(goldProvider.prices, 'EUR');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Colors.white,
       drawer: const CustomDrawer(),
       appBar: AppBar(
         title: Row(
@@ -140,22 +192,27 @@ class _UserDashboardState extends State<UserDashboard>
       ),
       body: Column(
         children: [
-          // 1. HEADER
+          // 1. HEADER ALANI
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
             decoration: const BoxDecoration(
-              color: Color(0xFF161A30),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF161A30), Color(0xFF243B55)],
               ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildHeaderItem(usdData),
-                Container(width: 1, height: 40, color: Colors.white24),
-                _buildHeaderItem(eurData),
+                Expanded(child: _buildHeaderItem(usdData)),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.white12,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                Expanded(child: _buildHeaderItem(eurData)),
               ],
             ),
           ),
@@ -169,7 +226,7 @@ class _UserDashboardState extends State<UserDashboard>
                 : _buildTabContent(catProvider.categories, goldProvider.prices),
           ),
 
-          // 3. ALT SEKMELER
+          // 3. ALT SEKMELER (TAB BAR)
           if (!catProvider.isLoading &&
               catProvider.categories.isNotEmpty &&
               _tabController != null)
@@ -178,6 +235,8 @@ class _UserDashboardState extends State<UserDashboard>
       ),
     );
   }
+
+  // --- HELPER WIDGETS ---
 
   Widget _buildTabContent(
     List<Category> categories,
@@ -189,22 +248,18 @@ class _UserDashboardState extends State<UserDashboard>
       controller: _tabController,
       physics: const BouncingScrollPhysics(),
       children: categories.map((category) {
-        // 1. Bu kategoriye ait ürünleri filtrele (Backend index'ine göre)
         final categoryList = allPrices.where((p) {
           return p.categoryIndex == category.orderIndex;
         }).toList();
 
-        // 2. Aynı sembol tekrarını önle (Unique Map)
-        // Provider zaten filtrelediği için burada extra gizleme mantığına gerek yok
         final uniqueMap = <String, PriceData>{};
         for (var item in categoryList) {
           uniqueMap[item.symbol] = item;
         }
         final uniqueList = uniqueMap.values.toList();
 
-        // 3. Sırala
         uniqueList.sort(
-          (a, b) => (a.orderIndex ?? 99).compareTo(b.orderIndex ?? 99),
+          (a, b) => (a.orderIndex ?? 9999).compareTo(b.orderIndex ?? 9999),
         );
 
         return _buildPriceList(uniqueList, category.name);
@@ -231,55 +286,66 @@ class _UserDashboardState extends State<UserDashboard>
 
     return Column(
       children: [
+        // TABLO BAŞLIĞI
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFF222831),
-            borderRadius: BorderRadius.circular(10),
+            color: Colors.grey[200],
+            border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
           ),
-          child: const Row(
+          child: Row(
             children: [
               Expanded(
                 flex: 3,
                 child: Text(
-                  "Birim",
+                  "Birim ⇅",
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
                 ),
               ),
               Expanded(
-                flex: 2,
+                flex: 3, // Oranı biraz artırdık rahat sığsın
                 child: Text(
                   "Alış",
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
                 ),
               ),
               Expanded(
-                flex: 2,
+                flex: 3, // Oranı biraz artırdık rahat sığsın
                 child: Text(
                   "Satış",
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
                 ),
               ),
             ],
           ),
         ),
+
+        // LİSTE ELEMANLARI
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            padding: EdgeInsets.zero,
             itemCount: prices.length,
-            separatorBuilder: (c, i) => const SizedBox(height: 8),
+            separatorBuilder: (c, i) => Divider(
+              height: 1,
+              color: Colors.grey.shade200,
+              indent: 16,
+              endIndent: 16,
+            ),
             itemBuilder: (context, index) {
               return _buildPriceCard(prices[index]);
             },
@@ -289,55 +355,43 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
+  // 🔥 TAB BAR ALANI (ÇİZGİ KALDIRILDI)
   Widget _buildBottomTabBar(List<Category> categories) {
     return Container(
-      height: 75,
+      height: 70,
       decoration: const BoxDecoration(
-        color: Color(0xFF161A30),
-        border: Border(top: BorderSide(color: Colors.white12, width: 0.5)),
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.black12, width: 0.5)),
       ),
       child: SafeArea(
         child: TabBar(
           controller: _tabController,
-          isScrollable: false,
-          indicator: const BoxDecoration(),
-          indicatorColor: Colors.transparent,
-          dividerColor: Colors.transparent,
+          isScrollable: false, // 5 Eşit parça
+          // 🔥 ÇİZGİYİ KALDIRAN KISIM BURASI
+          indicator: const BoxDecoration(), // Boş dekorasyon = Çizgi yok
+          dividerColor: Colors.transparent, // Alt ayraç rengi şeffaf
+
+          labelColor: const Color(0xFF161A30),
+          unselectedLabelColor: Colors.grey,
           labelPadding: EdgeInsets.zero,
           onTap: (index) {
             setState(() => _selectedCategoryIndex = index);
           },
-          tabs: categories.asMap().entries.map((entry) {
-            int idx = entry.key;
-            Category cat = entry.value;
-            bool isSelected = idx == _selectedCategoryIndex;
-            bool isLast = idx == categories.length - 1;
-
+          tabs: categories.map((cat) {
             return Tab(
-              height: 75,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  border: isLast
-                      ? null
-                      : const Border(
-                          right: BorderSide(color: Colors.white24, width: 0.5),
-                        ),
-                ),
-                child: Center(
-                  child: Text(
-                    cat.name.replaceAll('i', 'İ').toUpperCase(),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.visible,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.white60,
-                      fontWeight: isSelected
-                          ? FontWeight.w900
-                          : FontWeight.w500,
-                      fontSize: 13,
-                      height: 1.1,
+              height: 70,
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                    child: Text(
+                      cat.name.replaceAll('i', 'İ').toUpperCase(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
                     ),
                   ),
                 ),
@@ -349,37 +403,29 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
+  // 🔥 ÜRÜN KARTI (Oklar ve Overflow Hatası Giderilmiş Hali)
   Widget _buildPriceCard(PriceData item) {
-    final formatter = NumberFormat("#,##0.00", "tr_TR");
+    final bool isCurrency = item.category.contains("Döviz");
+    final formatter = NumberFormat(
+      isCurrency ? "#,##0.000" : "#,##0.00",
+      "tr_TR",
+    );
 
-    Color bgColor = (item.askFlashColor != null || item.bidFlashColor != null)
-        ? (item.askFlashColor ?? item.bidFlashColor ?? Colors.blue).withOpacity(
-            0.1,
-          )
-        : Colors.white;
+    Color bgColor = Colors.white;
+    if (item.askFlashColor != null || item.bidFlashColor != null) {
+      Color flash =
+          item.askFlashColor ?? item.bidFlashColor ?? Colors.transparent;
+      bgColor = flash.withOpacity(0.1);
+    }
 
-    Color bidColor = item.bidFlashColor ?? const Color(0xFF161A30);
-    Color askColor = item.askFlashColor ?? const Color(0xFF161A30);
-
-    // Kredi kartı kontrolü (İsime veya kategoriye göre)
     bool isCreditCard = item.category.contains("Kredi");
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+    return Container(
+      color: bgColor,
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            offset: const Offset(0, 2),
-            blurRadius: 4,
-          ),
-        ],
-      ),
       child: Row(
         children: [
+          // 1. SOL: SEMBOL
           Expanded(
             flex: 3,
             child: Column(
@@ -389,61 +435,43 @@ class _UserDashboardState extends State<UserDashboard>
                   item.symbol,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Color(0xFF161A30),
+                    fontSize: 16,
+                    color: Color(0xFF2C3E50),
                   ),
                 ),
                 if (item.description != item.symbol &&
                     item.description.isNotEmpty)
                   Text(
                     item.description,
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),
           ),
+
+          // 2. ORTA: ALIŞ FİYATI + OK (Hatasız)
           Expanded(
-            flex: 2,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  isCreditCard ? "" : formatter.format(item.bid),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: bidColor,
-                  ),
-                ),
-                if (!isCreditCard)
-                  Icon(
-                    item.isBidUp ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                    color: item.bidFlashColor ?? Colors.transparent,
-                    size: 18,
-                  ),
-              ],
+            flex: 3, // Flex artırıldı, yer açıldı
+            child: _buildPriceCell(
+              priceText: isCreditCard ? "" : formatter.format(item.bid),
+              // Eğer modelde bid için ayrı yön varsa onu kullan, yoksa genel yönü kullan
+              isUp: item.isAskUp,
+              hasArrow: !isCreditCard,
             ),
           ),
+
+          // 3. SAĞ: SATIŞ FİYATI + OK (Hatasız)
           Expanded(
-            flex: 2,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  formatter.format(item.ask),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: askColor,
-                  ),
-                ),
-                Icon(
-                  item.isAskUp ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                  color: item.askFlashColor ?? Colors.transparent,
-                  size: 18,
-                ),
-              ],
+            flex: 3, // Flex artırıldı, yer açıldı
+            child: _buildPriceCell(
+              priceText: formatter.format(item.ask),
+              isUp: item.isAskUp,
+              hasArrow: true,
             ),
           ),
         ],
@@ -451,9 +479,53 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
+  // 🔥 YENİ: Fiyat ve Ok Hücresini Çizen Yardımcı Metod (Kod tekrarını ve hataları önler)
+  Widget _buildPriceCell({
+    required String priceText,
+    required bool isUp,
+    required bool hasArrow,
+  }) {
+    // Renk ve İkon Seçimi
+    Color trendColor = isUp ? Colors.green : Colors.red;
+    IconData trendIcon = isUp ? Icons.arrow_drop_up : Icons.arrow_drop_down;
+
+    // Fiyat Rengi
+    Color valueColor = const Color(0xFF2C3E50);
+
+    return FittedBox(
+      // 🔥 FittedBox: Yazı sığmazsa otomatik küçülür, "flowed by pixels" hatasını çözer.
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerRight,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text(
+            priceText,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: valueColor,
+            ),
+          ),
+          if (hasArrow && priceText.isNotEmpty) ...[
+            const SizedBox(width: 2),
+            Icon(trendIcon, color: trendColor, size: 24),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Header Tasarımı (Değişmedi)
   Widget _buildHeaderItem(PriceData item) {
-    final formatter = NumberFormat("#,##0.0000", "tr_TR");
-    Color color = item.askFlashColor ?? Colors.white;
+    final formatter = NumberFormat("#,##0.000", "tr_TR");
+
+    Color iconColor = Colors.grey;
+    if (item.isAskUp)
+      iconColor = Colors.greenAccent;
+    else if (!item.isAskUp)
+      iconColor = Colors.redAccent;
+
     IconData icon = item.isAskUp ? Icons.arrow_drop_up : Icons.arrow_drop_down;
 
     String title = item.symbol;
@@ -471,24 +543,23 @@ class _UserDashboardState extends State<UserDashboard>
             color: Colors.white70,
             fontSize: 12,
             fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
           ),
         ),
         const SizedBox(height: 4),
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               formatter.format(item.ask),
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Icon(
-              icon,
-              color: item.askFlashColor != null ? color : Colors.transparent,
-              size: 24,
-            ),
+            const SizedBox(width: 4),
+            Icon(icon, color: iconColor, size: 28),
           ],
         ),
       ],

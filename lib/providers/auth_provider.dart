@@ -3,6 +3,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/secure_storage_service.dart';
+import '../main.dart'; // 🔥 navigatorKey'e erişim için
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -28,12 +29,10 @@ class AuthProvider with ChangeNotifier {
         Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
         _user = User.fromJwt(decodedToken, token);
 
-        // 🔥 DEĞİŞİKLİK 1: Token'ı API istekleri için kaydediyoruz.
+        // Token'ı API istekleri için kaydet
         await SecureStorageService().saveToken(token);
 
-        // 🔥 DEĞİŞİKLİK 2: ROL FARK ETMEKSİZİN BİLGİLERİ KAYDET
-        // İster User olsun, ister Viewer; "Çıkış Yap" dese bile
-        // bir sonraki girişte bilgiler hazır olsun istiyoruz.
+        // Kullanıcı adı ve şifreyi bir sonraki giriş için sakla
         await SecureStorageService().saveCredentials(username, password);
 
         return null; // Başarılı
@@ -61,13 +60,11 @@ class AuthProvider with ChangeNotifier {
       final tempUser = User.fromJwt(decodedToken, token);
 
       // Viewer ise token geçerli olsa bile otomatik içeri alma.
-      // Login ekranına düşsün, bilgiler zaten dolu gelecek.
       if (tempUser.isViewer) {
         await SecureStorageService().deleteToken();
         return false;
       }
 
-      // Normal User ise içeri al
       _user = tempUser;
       notifyListeners();
       return true;
@@ -79,12 +76,8 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     _user = null;
     _isLoading = false;
-
-    // 🔥 DEĞİŞİKLİK 3: Sadece Token'ı siliyoruz!
-    // 'clearAll()' yaparsak kayıtlı şifreler de gider.
-    // 'deleteToken()' yaparsak sadece oturum düşer, şifreler kalır.
+    // Sadece token'ı sil, kayıtlı şifreler kalsın
     await SecureStorageService().deleteToken();
-
     notifyListeners();
   }
 
@@ -92,9 +85,32 @@ class AuthProvider with ChangeNotifier {
   void logoutForBackground() {
     if (isViewer) {
       _user = null;
-      // Token'ı sil, oturum düşsün.
       SecureStorageService().deleteToken();
       notifyListeners();
+    }
+  }
+
+  // 🔥 5. YETKİSİZ ERİŞİM / KICK LOGOUT (Dashboard ve API Tetikler) 🔥
+  Future<void> handleUnauthorized() async {
+    // Sadece kullanıcı varsa işlem yap (Zaten logout ise yapma)
+    if (_user != null) {
+      print("🔐 Oturum sonlandırılıyor (Force Logout / Kick)");
+
+      _user = null;
+      // Token'ı sil ki tekrar istek atamasın
+      await SecureStorageService().deleteToken();
+
+      // UI'ı güncelle
+      notifyListeners();
+
+      // 🔥 KESİN ÇÖZÜM: Global Key ile sayfayı zorla Login'e (Root) çevir.
+      if (navigatorKey.currentState != null) {
+        // Tüm geçmişi sil ve en başa (AuthWrapper -> Login) dön.
+        navigatorKey.currentState!.pushNamedAndRemoveUntil(
+          '/',
+          (route) => false,
+        );
+      }
     }
   }
 

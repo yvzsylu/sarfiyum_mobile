@@ -12,7 +12,10 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Resimlerin olduğu kök URL (Environment'tan alınmalı normalde)
+  // 🔥 TEMA RENGİ
+  final Color _primaryColor = const Color(0xFF161A30);
+
+  // Resimlerin olduğu kök URL
   final String apiRoot = "https://sarfiyum.com";
 
   @override
@@ -29,31 +32,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = provider.userProfile;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Hafif gri arka plan
+      backgroundColor: Colors.white,
       drawer: const CustomDrawer(),
       appBar: AppBar(
         title: const Text(
           "PROFİLİM",
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+            color: Colors.white,
+          ),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF161A30),
+        // 🔥 1. İSTEK: AppBar (Header) Arkaplanı GRADIENT yapıldı
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_primaryColor, const Color(0xFF243B55)],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent, // Gradient görünmesi için şeffaf
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: _primaryColor))
           : user == null
           ? Center(child: Text(provider.errorMessage ?? "Veri yüklenemedi"))
           : SingleChildScrollView(
               child: Column(
                 children: [
-                  // --- ÜST KART (Mavi Alan + Avatar + İsim) ---
+                  // --- ÜST KART ---
                   _buildProfileHeaderCard(context, provider, user),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
-                  // --- KİŞİSEL & ADRES BİLGİLERİ (Angular'daki alt component) ---
+                  // --- KİŞİSEL & ADRES BİLGİLERİ ---
                   _buildPersonalInfoCard(user),
 
                   const SizedBox(height: 30),
@@ -72,169 +89,213 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        // Modern Gölge
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.grey.withOpacity(0.15),
+            blurRadius: 15,
             offset: const Offset(0, 5),
           ),
         ],
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         children: [
-          // Mavi Arka Plan
+          // 🔥 2. İSTEK: Logonun olduğu yer TEK RENK (Solid) yapıldı
           Container(
-            height: 100,
-            decoration: const BoxDecoration(
-              color: Color(0xFF222831),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+            height: 120,
+            decoration: BoxDecoration(
+              color: _primaryColor, // Sadece Koyu Lacivert
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16), // Kartın köşeleriyle uyumlu
+                topRight: Radius.circular(16),
               ),
             ),
           ),
 
           // Avatar ve Buton Alanı
           Transform.translate(
-            offset: const Offset(0, -40), // Yukarı kaydır
+            offset: const Offset(0, -50), // Yukarı kaydır
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              child: Column(
                 children: [
-                  // AVATAR
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                    ),
-                    child: CircleAvatar(
-                      radius: 45,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: user.tenantLogoUrl != null
-                          ? NetworkImage("$apiRoot${user.tenantLogoUrl}")
-                          : null,
-                      child: user.tenantLogoUrl == null
-                          ? Text(
-                              user.initials,
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0D1B46),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // AVATAR
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          radius: 45,
+                          backgroundColor: Colors.grey[100],
+                          backgroundImage: user.tenantLogoUrl != null
+                              ? NetworkImage("$apiRoot${user.tenantLogoUrl}")
+                              : null,
+                          child: user.tenantLogoUrl == null
+                              ? Text(
+                                  user.initials,
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    color: _primaryColor,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                      const Spacer(),
+                      // LOGO YÜKLE BUTONU
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: ElevatedButton.icon(
+                          onPressed: provider.isUploading
+                              ? null
+                              : () async {
+                                  bool success = await provider.uploadLogo();
+                                  if (success && context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Logo güncellendi"),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  } else if (provider.errorMessage != null &&
+                                      context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(provider.errorMessage!),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                },
+                          icon: provider.isUploading
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _primaryColor,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.upload_rounded,
+                                  size: 18,
+                                  color: _primaryColor,
+                                ),
+                          label: Text(
+                            "Logo Yükle",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _primaryColor,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            elevation: 2,
+                            shadowColor: Colors.grey.withOpacity(0.2),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // İsim ve Kullanıcı Adı
+                  SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                user.fullName,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF161A30),
+                                ),
                               ),
-                            )
-                          : null,
+                            ),
+                            const SizedBox(width: 8),
+                            if (user.isUserActive)
+                              const Icon(
+                                Icons.verified,
+                                color: Colors.blue,
+                                size: 22,
+                              ),
+                          ],
+                        ),
+                        Text(
+                          "@${user.username}",
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const Spacer(),
-                  // LOGO YÜKLE BUTONU
-                  ElevatedButton.icon(
-                    onPressed: provider.isUploading
-                        ? null
-                        : () async {
-                            bool success = await provider.uploadLogo();
-                            if (success && context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Logo güncellendi"),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } else if (provider.errorMessage != null &&
-                                context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(provider.errorMessage!),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                    icon: provider.isUploading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF0D1B46),
-                            ),
-                          )
-                        : const Icon(Icons.upload, size: 18),
-                    label: const Text("Logo Yükle"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF0D1B46),
-                      side: const BorderSide(color: Color(0xFF0D1B46)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 10),
+
+                  // İstatistikler Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildInfoItem(
+                        Icons.calendar_month_rounded,
+                        user.tenantCreatedAt != null
+                            ? DateFormat(
+                                'MM/yyyy',
+                              ).format(user.tenantCreatedAt!)
+                            : '-',
+                        "Kayıt Tarihi",
                       ),
-                    ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: Colors.grey.shade200,
+                      ),
+                      _buildInfoItem(
+                        Icons.check_circle_rounded,
+                        user.isTenantActive ? 'Aktif' : 'Pasif',
+                        "Firma Durumu",
+                        color: user.isTenantActive ? Colors.green : Colors.red,
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: Colors.grey.shade200,
+                      ),
+                      _buildInfoItem(
+                        Icons.phone_iphone_rounded,
+                        user.tenantPhoneNumber ?? '-',
+                        "Telefon",
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-          ),
-
-          // İsim ve Username
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      user.fullName,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    if (user.isUserActive)
-                      const Icon(Icons.verified, color: Colors.blue, size: 20),
-                  ],
-                ),
-                Text(
-                  "@${user.username}",
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-          const Divider(),
-
-          // İstatistik Kartları (Tarih, Durum, Telefon)
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                // Tarih
-                _buildInfoItem(
-                  Icons.calendar_month,
-                  user.tenantCreatedAt != null
-                      ? DateFormat('MM/yyyy').format(user.tenantCreatedAt!)
-                      : '-',
-                  "Kayıt Tarihi",
-                ),
-                // Durum
-                _buildInfoItem(
-                  Icons.check_circle,
-                  user.isTenantActive ? 'Aktif' : 'Pasif',
-                  "Firma Durumu",
-                  color: user.isTenantActive ? Colors.green : Colors.red,
-                ),
-                // Telefon
-                _buildInfoItem(
-                  Icons.phone,
-                  user.tenantPhoneNumber ?? '-',
-                  "İş Telefonu",
-                ),
-              ],
             ),
           ),
         ],
@@ -242,38 +303,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Alt Bilgi Kartı (Personal Info Component karşılığı)
+  // Alt Bilgi Kartı
   Widget _buildPersonalInfoCard(dynamic user) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.grey.withOpacity(0.15),
+            blurRadius: 15,
             offset: const Offset(0, 5),
           ),
         ],
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Firma & Adres Bilgileri",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0D1B46),
-            ),
+          Row(
+            children: [
+              Icon(Icons.business_rounded, color: _primaryColor),
+              const SizedBox(width: 10),
+              Text(
+                "Firma & Adres Bilgileri",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: _primaryColor,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
           _buildDetailRow("Firma Adı", user.tenantName ?? '-'),
           _buildDetailRow("Vergi No", user.tenantTaxNumber ?? '-'),
           _buildDetailRow("E-Posta", user.email),
-          const Divider(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Divider(color: Colors.grey.shade200),
+          ),
           _buildDetailRow(
             "Şehir/İlçe",
             "${user.tenantCity ?? ''} / ${user.tenantDistrict ?? ''}",
@@ -284,37 +355,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Yardımcı Widget: İkonlu Bilgi (Üst Kısım için)
+  // Yardımcı Widget: İkonlu Bilgi
   Widget _buildInfoItem(
     IconData icon,
     String title,
     String subtitle, {
-    Color color = const Color(0xFF0D1B46),
+    Color? color,
   }) {
+    final finalColor = color ?? const Color(0xFF161A30);
     return Column(
       children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 5),
+        Icon(icon, color: finalColor, size: 26),
+        const SizedBox(height: 4),
         Text(
           title,
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             fontSize: 14,
-            color: color,
+            color: finalColor,
           ),
         ),
         Text(
           subtitle,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
         ),
       ],
     );
   }
 
-  // Yardımcı Widget: Satır Detay (Alt Kısım için)
+  // Yardımcı Widget: Satır Detay
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -322,14 +394,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             flex: 2,
             child: Text(
               label,
-              style: const TextStyle(color: Colors.grey, fontSize: 13),
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Expanded(
             flex: 3,
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: Color(0xFF2C3E50),
+              ),
             ),
           ),
         ],

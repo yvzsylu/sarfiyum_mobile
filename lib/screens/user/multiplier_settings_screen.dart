@@ -14,7 +14,7 @@ class MultiplierSettingsScreen extends StatefulWidget {
 }
 
 class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
-  // Tema Renkleri
+  // 🔥 TEMA RENGİ (Dashboard ile Aynı)
   final Color _primaryColor = const Color(0xFF161A30);
 
   @override
@@ -30,12 +30,15 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     final provider = context.watch<MultiplierSettingsProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Colors.white, // Dashboard gibi temiz beyaz
       drawer: const CustomDrawer(),
       appBar: AppBar(
         title: const Text(
           "AYARLAR",
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          style: TextStyle(
+            fontWeight: FontWeight.w900, // Kalın Font
+            letterSpacing: 1.5,
+          ),
         ),
         centerTitle: true,
         backgroundColor: _primaryColor,
@@ -45,19 +48,19 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
       ),
       body: Column(
         children: [
-          // --- 1. HEADER ALANI ---
+          // --- 1. HEADER ALANI (Dashboard Gradient Stili) ---
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 25),
             decoration: BoxDecoration(
-              color: _primaryColor,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [_primaryColor, const Color(0xFF243B55)],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _primaryColor.withOpacity(0.3),
+                  color: Colors.black.withOpacity(0.2),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
@@ -68,7 +71,11 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
               children: [
                 const Text(
                   "Ürün & Çarpan Yönetimi",
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -213,7 +220,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                   maxLines: 2,
                   style: TextStyle(
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w900, // Kalın
                     height: 1.1,
                     color: textColor,
                   ),
@@ -235,13 +242,15 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        // Daha modern gölge
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.grey.withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -264,18 +273,22 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                   "${products.length}",
                   style: TextStyle(
                     color: _primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                categoryName,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: _primaryColor,
+              Expanded(
+                child: Text(
+                  categoryName.toUpperCase(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    color: _primaryColor,
+                    letterSpacing: 0.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -303,7 +316,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     );
   }
 
-  // --- 🔥 GÜNCELLENEN ROW: RENK VE DURUM MANTIĞI DÜZELTİLDİ ---
+  // --- 🔥 GÜNCELLENEN ROW ---
   Widget _buildProductRow(
     BuildContext context,
     MultiplierSettingsProvider provider,
@@ -347,24 +360,23 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                     Text(
                       item.name,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         fontSize: 15,
-                        color: item.isActive ? Colors.black87 : Colors.grey,
+                        color: item.isActive
+                            ? const Color(0xFF2C3E50)
+                            : Colors.grey,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    // 🔥 PLATFORM ICONLARI (DÜZELTİLDİ)
+                    // Platform Iconları
                     Row(
                       children: [
                         _buildPlatformToggleIcon(
                           icon: Icons.language,
-                          isPlatformEnabled:
-                              item.showOnWeb, // Platform açık mı?
-                          isProductActive:
-                              item.isActive, // Ürün genel olarak aktif mi?
+                          isPlatformEnabled: item.showOnWeb,
+                          isProductActive: item.isActive,
                           activeColor: Colors.blueAccent,
                           onTap: () {
-                            // Ürün pasifse işlem yapma (İsteğe bağlı, tıklanınca açılmasını istersen burayı değiştirme)
                             if (!item.isActive) return;
                             setState(() => item.showOnWeb = !item.showOnWeb);
                             provider.toggleWebStatus(item.id);
@@ -373,10 +385,8 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                         const SizedBox(width: 10),
                         _buildPlatformToggleIcon(
                           icon: Icons.phone_iphone,
-                          isPlatformEnabled:
-                              item.showOnMobile, // Platform açık mı?
-                          isProductActive:
-                              item.isActive, // Ürün genel olarak aktif mi?
+                          isPlatformEnabled: item.showOnMobile,
+                          isProductActive: item.isActive,
                           activeColor: Colors.orange,
                           onTap: () {
                             if (!item.isActive) return;
@@ -395,6 +405,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                 scale: 0.8,
                 child: Switch(
                   activeColor: Colors.green,
+                  activeTrackColor: Colors.green.shade100,
                   value: item.isActive,
                   onChanged: (val) => setState(() => item.isActive = val),
                 ),
@@ -433,35 +444,37 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
             ],
           ),
           const Divider(height: 20),
+
+          // 🔥 INPUT ALANI (FittedBox ile taşma önlendi)
           Row(
             children: [
               if (!isCreditCard)
                 Expanded(
                   child: _buildCompactInput(
-                    "Alış",
+                    "ALIŞ",
                     item.buyMultiplier,
                     (v) => item.buyMultiplier = v,
-                    Colors.green,
-                    enabled: item.isActive, // Pasifse disable et
+                    Colors.green.shade700,
+                    enabled: item.isActive,
                   ),
                 ),
               if (!isCreditCard) const SizedBox(width: 10),
               Expanded(
                 child: _buildCompactInput(
-                  "Satış",
+                  "SATIŞ",
                   item.sellMultiplier,
                   (v) => item.sellMultiplier = v,
-                  Colors.red,
+                  Colors.red.shade700,
                   enabled: item.isActive,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _buildCompactInput(
-                  "Makas",
+                  "MAKAS",
                   item.addonAmount,
                   (v) => item.addonAmount = v,
-                  Colors.blue,
+                  Colors.blue.shade700,
                   suffix: "₺",
                   enabled: item.isActive,
                 ),
@@ -473,9 +486,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     );
   }
 
-  // --- 🔥 DÜZELTİLMİŞ IKON BUTONU ---
-  // Mantık: Ürün pasifse -> Her zaman sönük (Gri).
-  // Ürün aktifse -> showOn... true ise renkli, false ise gri.
+  // --- 🔥 PLATFORM IKON ---
   Widget _buildPlatformToggleIcon({
     required IconData icon,
     required bool isPlatformEnabled,
@@ -483,10 +494,8 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     required Color activeColor,
     required VoidCallback onTap,
   }) {
-    // Görünüm mantığı
     final bool isVisuallyActive = isProductActive && isPlatformEnabled;
 
-    // Renkleri belirle
     final Color bgColor = isVisuallyActive
         ? activeColor.withOpacity(0.1)
         : Colors.grey.shade100;
@@ -498,21 +507,21 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
         : Colors.grey.shade300;
 
     return InkWell(
-      onTap:
-          onTap, // Pasifken tıklamayı engellemek istersen: isProductActive ? onTap : null
+      onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(6), // Tıklama alanı biraz büyüdü
         decoration: BoxDecoration(
           color: bgColor,
           shape: BoxShape.circle,
           border: Border.all(color: borderColor),
         ),
-        child: Icon(icon, size: 14, color: iconColor),
+        child: Icon(icon, size: 16, color: iconColor),
       ),
     );
   }
 
+  // --- 🔥 COMPACT INPUT (Taşma Önleyici FittedBox) ---
   Widget _buildCompactInput(
     String label,
     double val,
@@ -524,41 +533,54 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade600,
+        // Başlık (Sığmazsa küçülsün)
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: Colors.grey.shade600,
+              letterSpacing: 0.5,
+            ),
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         SizedBox(
-          height: 35,
+          height: 40, // Yükseklik biraz arttı
           child: TextFormField(
             key: ValueKey(val),
             initialValue: val.toString().replaceAll('.', ','),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [DecimalTextInputFormatter()],
-            enabled: enabled, // 🔥 Pasiflik eklendi
+            enabled: enabled,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: enabled ? color : Colors.grey, // Pasifse gri yap
+              color: enabled ? color : Colors.grey,
             ),
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
+                horizontal: 10,
                 vertical: 0,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(color: Colors.grey.shade300),
               ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: color, width: 1.5),
+              ),
               filled: !enabled,
-              fillColor: !enabled ? Colors.grey.shade100 : null,
+              fillColor: !enabled ? Colors.grey.shade100 : Colors.white,
               suffixText: suffix,
-              suffixStyle: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+              suffixStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500),
             ),
             onChanged: (v) {
               if (v.isNotEmpty) {
@@ -572,6 +594,8 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     );
   }
 
+  // ... (MODAL KODLARI AYNEN DEVAM EDİYOR, SADECE HEADER RENKLERİ GÜNCELLENDİ)
+
   // --- ONAY MODALLARI ---
   void _confirmDelete(
     BuildContext context,
@@ -581,12 +605,15 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Silmek istiyor musunuz?"),
+        title: const Text(
+          "Silmek istiyor musunuz?",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: const Text("Bu işlem geri alınamaz."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Vazgeç"),
+            child: const Text("Vazgeç", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -611,12 +638,15 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Kaydet"),
+        title: const Text(
+          "Kaydet",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: const Text("Tüm değişiklikler yayınlansın mı?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("İptal"),
+            child: const Text("İptal", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -651,6 +681,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     BuildContext context,
     MultiplierSettingsProvider provider,
   ) {
+    // ... (Mantık aynı, sadece UI stilleri aşağıda kullanılıyor)
     final nameCtrl = TextEditingController();
     final buyCtrl = TextEditingController(text: "1,0000");
     final sellCtrl = TextEditingController(text: "1,0000");
@@ -699,8 +730,8 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                             "Yeni Ürün Oluştur",
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              fontWeight: FontWeight.w900, // Kalın
+                              color: Color(0xFF161A30),
                             ),
                           ),
                           InkWell(
@@ -726,6 +757,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                       ),
 
                       const SizedBox(height: 15),
+                      // ... (Bilgi Kutusu vb. aynı kalıyor)
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -842,6 +874,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                             elevation: 5,
                           ),
                           onPressed: () {
+                            // ... (Kaydetme mantığı aynı)
                             double buy =
                                 double.tryParse(
                                   buyCtrl.text.replaceAll(',', '.'),
@@ -919,6 +952,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     MultiplierSettingsProvider provider,
     TenantProduct existingProduct,
   ) {
+    // ... (Veri hazırlama aynı)
     final nameCtrl = TextEditingController(text: existingProduct.name);
     final buyCtrl = TextEditingController(
       text: existingProduct.buyMultiplier.toString().replaceAll('.', ','),
@@ -971,6 +1005,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // ... (UI Başlık vb aynı stil)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -978,7 +1013,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                             "Ürünü Düzenle",
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
                           InkWell(
@@ -1031,6 +1066,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                       ),
 
                       const SizedBox(height: 15),
+                      // ... (Switchler ve Buton aynı)
                       Row(
                         children: [
                           Expanded(
@@ -1085,6 +1121,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                             ),
                           ),
                           onPressed: () {
+                            // ... (Kaydet mantığı)
                             double buy =
                                 double.tryParse(
                                   buyCtrl.text.replaceAll(',', '.'),
@@ -1152,6 +1189,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
     BuildContext context,
     MultiplierSettingsProvider provider,
   ) {
+    // ... (Katalog mantığı aynı, sadece renkler uyumlu hale gelecek)
     List<SystemCatalogItem> allItems = [];
     List<SystemCatalogItem> filteredItems = [];
     bool isDialogLoading = true;
@@ -1173,6 +1211,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
       pageBuilder: (ctx, anim1, anim2) {
         return StatefulBuilder(
           builder: (context, setStateModal) {
+            // ... (Yükleme mantığı aynı)
             if (isDialogLoading && allItems.isEmpty) {
               provider.getSystemCatalog().then((res) {
                 if (context.mounted) {
@@ -1254,8 +1293,7 @@ class _MultiplierSettingsScreenState extends State<MultiplierSettingsScreen> {
                             "Katalogdan Ekle",
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
                           InkWell(
