@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sarfiyum_mobile/providers/category_settings_provider.dart';
 import 'package:sarfiyum_mobile/providers/profile_provider.dart';
 import 'package:sarfiyum_mobile/providers/viewer_provider.dart';
+import 'package:sarfiyum_mobile/providers/visitor_settings_provider.dart';
 import 'package:sarfiyum_mobile/services/secure_storage_service.dart';
 import 'package:sarfiyum_mobile/services/base_api_service.dart';
 
@@ -50,6 +51,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ViewerProvider()),
         ChangeNotifierProvider(create: (_) => CategorySettingsProvider()),
         ChangeNotifierProvider(create: (_) => TenantSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => VisitorSettingsProvider()),
       ],
       child: MaterialApp(
         // 🔥 2. NAVIGATOR KEY'İ BURAYA EKLE

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:sarfiyum_mobile/widgets/visitor_pricing_sheet.dart';
 import '../../providers/viewer_provider.dart';
 import '../../widgets/custom_drawer.dart';
 import 'viewer_add_screen.dart';
@@ -281,6 +282,34 @@ class _ViewerListScreenState extends State<ViewerListScreen> {
               Row(
                 children: [
                   // Düzenle
+                  InkWell(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true, // Tam ekran hissiyatı için
+                        backgroundColor: Colors.transparent,
+                        builder: (ctx) => VisitorPricingSheet(
+                          visitorId: item.id,
+                          visitorName: item.fullName,
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.attach_money_rounded,
+                        size: 18,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
                   InkWell(
                     onTap: () {
                       Navigator.push(
