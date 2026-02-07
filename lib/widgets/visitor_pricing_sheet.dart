@@ -32,51 +32,68 @@ class _VisitorPricingSheetState extends State<VisitorPricingSheet> {
   Widget build(BuildContext context) {
     final provider = context.watch<VisitorSettingsProvider>();
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.92,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          // HEADER
-          _buildHeader(context),
+    // 🔥 1. HAMLE: GestureDetector ile sarmalıyoruz
+    // Bu sayede boşluğa tıklayınca klavye kapanacak ama sayfa kapanmayacak.
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus(); // Klavyeyi indir
+      },
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.92,
+        // 🔥 2. HAMLE: Klavye payı bırakıyoruz
+        // Bu sayede klavye açılınca "Kaydet" butonu klavyenin üstüne çıkar.
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // HEADER
+            _buildHeader(context),
 
-          // LİSTE
-          Expanded(
-            child: provider.isLoading
-                ? Center(child: CircularProgressIndicator(color: _primaryColor))
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                    itemCount: provider.groupedItems.length,
-                    itemBuilder: (ctx, index) {
-                      String key = provider.groupedItems.keys.elementAt(index);
-                      List<MergedProductItem> items =
-                          provider.groupedItems[key]!;
+            // LİSTE
+            Expanded(
+              child: provider.isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(color: _primaryColor),
+                    )
+                  : ListView.builder(
+                      // Klavye açılınca liste sıkışacağı için alt boşluğu azalttık
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                      itemCount: provider.groupedItems.length,
+                      itemBuilder: (ctx, index) {
+                        String key = provider.groupedItems.keys.elementAt(
+                          index,
+                        );
+                        List<MergedProductItem> items =
+                            provider.groupedItems[key]!;
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildCategoryHeader(key, items.length),
-                          ...items.map((item) => _buildItemRow(item, provider)),
-                          const SizedBox(height: 16),
-                        ],
-                      );
-                    },
-                  ),
-          ),
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildCategoryHeader(key, items.length),
+                            ...items.map(
+                              (item) => _buildItemRow(item, provider),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        );
+                      },
+                    ),
+            ),
 
-          // KAYDET BUTONU
-          _buildSaveFooter(context, provider),
-        ],
+            // KAYDET BUTONU
+            _buildSaveFooter(context, provider),
+          ],
+        ),
       ),
     );
   }
 
-  // ... (Header ve CategoryHeader widgetları önceki kodla aynı)
   Widget _buildHeader(BuildContext context) {
-    // (Önceki cevaptaki _buildHeader kodu buraya)
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -132,7 +149,6 @@ class _VisitorPricingSheetState extends State<VisitorPricingSheet> {
   }
 
   Widget _buildCategoryHeader(String title, int count) {
-    // (Önceki cevaptaki _buildCategoryHeader kodu buraya)
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, left: 4),
       child: Row(
@@ -211,7 +227,6 @@ class _VisitorPricingSheetState extends State<VisitorPricingSheet> {
               if (hasSpecial)
                 InkWell(
                   onTap: () async {
-                    // Sıfırla
                     await provider.resetSetting(
                       widget.visitorId,
                       item.product.id,
@@ -258,7 +273,6 @@ class _VisitorPricingSheetState extends State<VisitorPricingSheet> {
                   "Alış",
                   item.specialBuy,
                   item.product.buyMultiplier,
-                  // 🔥 DEĞİŞİKLİĞİ NESNEYE YAZIYORUZ (Provider state'i değişiyor)
                   (val) => item.specialBuy = val,
                   Colors.green.shade700,
                 ),
@@ -297,8 +311,6 @@ class _VisitorPricingSheetState extends State<VisitorPricingSheet> {
     Function(double?) onChanged,
     Color color,
   ) {
-    // UI güncellendiğinde (setState veya notifyListeners) ValueKey değişmezse input içeriği yenilenmez.
-    // Key'e currentValue'yu ekleyerek dışarıdan (Sıfırla butonuyla) değişim olduğunda inputun da yenilenmesini sağlıyoruz.
     final displayValue = currentValue != null
         ? currentValue.toString().replaceAll('.', ',')
         : "";
@@ -318,7 +330,7 @@ class _VisitorPricingSheetState extends State<VisitorPricingSheet> {
         SizedBox(
           height: 45,
           child: TextFormField(
-            key: ValueKey("${label}_${itemKey(currentValue)}"), // Benzersiz Key
+            key: ValueKey("${label}_${itemKey(currentValue)}"),
             initialValue: displayValue,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [DecimalTextInputFormatter()],
@@ -327,8 +339,6 @@ class _VisitorPricingSheetState extends State<VisitorPricingSheet> {
               fontSize: 14,
               color: color,
             ),
-
-            // Varsayılan değeri HINT olarak gösteriyoruz
             decoration: InputDecoration(
               hintText: defaultValue.toStringAsFixed(2).replaceAll('.', ','),
               hintStyle: TextStyle(
@@ -362,7 +372,6 @@ class _VisitorPricingSheetState extends State<VisitorPricingSheet> {
                 borderSide: BorderSide(color: color, width: 2),
               ),
             ),
-
             onChanged: (val) {
               if (val.isEmpty) {
                 onChanged(null);
@@ -403,7 +412,6 @@ class _VisitorPricingSheetState extends State<VisitorPricingSheet> {
             onPressed: provider.isLoading
                 ? null
                 : () async {
-                    // 🔥 Provider'daki saveAllSettings metodunu çağırıyoruz
                     bool success = await provider.saveAllSettings(
                       widget.visitorId,
                     );
