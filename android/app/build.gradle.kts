@@ -29,7 +29,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.sarfiyum.mobile"
+        applicationId = "com.cilcilaltin.mobile"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
