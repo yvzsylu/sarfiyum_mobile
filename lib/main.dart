@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sarfiyum_mobile/providers/tenant_settings_provider.dart';
+import 'package:sarfiyum_mobile/screens/common/splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sarfiyum_mobile/providers/category_settings_provider.dart';
 import 'package:sarfiyum_mobile/providers/profile_provider.dart';
@@ -9,7 +10,7 @@ import 'package:sarfiyum_mobile/providers/viewer_provider.dart';
 import 'package:sarfiyum_mobile/providers/visitor_settings_provider.dart';
 import 'package:sarfiyum_mobile/services/secure_storage_service.dart';
 import 'package:sarfiyum_mobile/services/base_api_service.dart';
-
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 // Providers
 import 'providers/auth_provider.dart';
 import 'providers/gold_hub_provider.dart';
@@ -24,7 +25,12 @@ import 'screens/user/user_dashboard.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // 🔥 1. Binding'i doğru şekilde alıyoruz
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+
+  // 🔥 2. NATIVE EKRANI DONDUR (Biz kaldır diyene kadar gitmez)
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
   await _checkFreshInstall();
   runApp(const MyApp());
 }
@@ -64,7 +70,8 @@ class MyApp extends StatelessWidget {
           scaffoldBackgroundColor: Colors.white,
         ),
         // LifecycleManager ile tüm uygulamayı sarıyoruz
-        home: const LifecycleManager(child: AuthWrapper()),
+        // home: const LifecycleManager(child: AuthWrapper()), // Direkt AuthWrapper ile başlatıyorduk, şimdi SplashScreen ile başlatacağız
+        home: const LifecycleManager(child: SplashScreen()),
       ),
     );
   }

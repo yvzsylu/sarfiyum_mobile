@@ -59,8 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               // 1. LOGO ALANI
               Image.asset(
-                "assets/images/sarfiyumlogo.png",
-                height: 60, // Biraz büyüttük
+                "assets/images/logo-login.png",
+                height: 70, // Biraz büyüttük
               ),
 
               const SizedBox(height: 20),

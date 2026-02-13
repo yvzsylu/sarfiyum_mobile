@@ -46,17 +46,20 @@ dependencies:
   intl: ^0.20.2
   image_picker: ^1.2.1
   url_launcher: ^6.3.2
+  flutter_native_splash: ^2.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1 # Sürümü kontrol et
+  flutter_lints: ^6.0.0
+
 
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/app-logo-gp.png" # Logunun olduğu yol (PNG olmalı, tercihen 1024x1024)
+  image_path: "assets/images/app-logo.png" # Logunun olduğu yol (PNG olmalı, tercihen 1024x1024)
   min_sdk_android: 21
   remove_alpha_ios: true
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -64,7 +67,6 @@ flutter_launcher_icons:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -109,3 +111,21 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_native_splash:
+  # EKRANIN arka planı
+  color: "#ffffff" 
+  
+  # Android 12 öncesi ve iOS için resim
+  image: assets/images/logo.png
+
+  # 🔥 ANDROID 12+ İÇİN SİHİRLİ AYAR
+  android_12:
+    # Kenarları bol boşluklu resim
+    image: assets/images/logo.png
+    
+    # 🔥 İKONUN arka planı (Ekranla aynı renk olmalı!)
+    icon_background_color: "#ffffff" 
+
+  # iOS ayarı
+  ios: true
