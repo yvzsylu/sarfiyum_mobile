@@ -1,4 +1,4 @@
-package com.example.sarfiyum_mobile
+package com.altinkosenadir.mobile
 
 import io.flutter.embedding.android.FlutterActivity
 

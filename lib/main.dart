@@ -63,7 +63,7 @@ class MyApp extends StatelessWidget {
         // 🔥 2. NAVIGATOR KEY'İ BURAYA EKLE
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        title: 'Sarfiyum Mobile',
+        title: 'Altın Köşe Nadir Kuyumculuk',
         theme: ThemeData(
           primarySwatch: Colors.amber,
           useMaterial3: true,
